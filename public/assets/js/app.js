@@ -141,7 +141,7 @@ class ProjectVaultApp {
 
     setupInactivityLock() {
         let inactivityTimer;
-        const lockTime = 60 * 1000; // 1 menit
+        const lockTime = 10 * 1000; // 10 detik
 
         const resetTimer = () => {
             clearTimeout(inactivityTimer);
@@ -193,6 +193,9 @@ class ProjectVaultApp {
         document.body.style.paddingRight = '';
         
         this.isUnlocked = false;
+        this.state.activeProject = null;
+        this.state.projects = [];
+        this.state.items = [];
         await this.makeRequest('api.php?action=logout');
         this.renderLockScreen(false);
     }
@@ -763,13 +766,7 @@ class ProjectVaultApp {
         SearchIndex.renderResults(container, this.searchMatches);
     }
 
-    async logout() {
-        await this.makeRequest('api.php?action=logout');
-        this.state.activeProject = null;
-        this.state.projects = [];
-        this.state.items = [];
-        this.renderLockScreen();
-    }
+
 
     showToast(message, variant = "info") {
         console.log(`[Vault Engine Log - ${variant.toUpperCase()}]: ${message}`);
