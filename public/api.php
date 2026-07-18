@@ -168,6 +168,30 @@ switch ($action) {
         }
         break;
 
+    case 'delete_project':
+        $projectId = preg_replace('/[^a-zA-Z0-9\-_]/', '', $payload['project_id'] ?? '');
+        if (empty($projectId)) {
+            echo json_encode(['success' => false, 'message' => 'Project ID missing.']);
+            exit;
+        }
+        $projectDir = __DIR__ . "/../storage/projects/{$projectId}";
+        if (is_dir($projectDir)) {
+            // Recursively delete the directory
+            $files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($projectDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::CHILD_FIRST
+            );
+            foreach ($files as $fileinfo) {
+                $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+                $todo($fileinfo->getRealPath());
+            }
+            rmdir($projectDir);
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Project not found.']);
+        }
+        break;
+
     case 'save_theme':
         $theme = $payload['theme'] ?? 'dark';
         $configFile = __DIR__ . '/../config/config.json';
@@ -270,7 +294,287 @@ switch ($action) {
         echo json_encode(['success' => true]);
         break;
 
-    default:
+    case 'get_config':
+        $configFile = __DIR__ . '/../config/config.json';
+        if (file_exists($configFile)) {
+            $config = StorageService::readJson($configFile, false);
+            echo json_encode([
+                'success' => true,
+                'config' => [
+                    'idle_timeout' => $config['idle_timeout'] ?? 900,
+                    'theme' => $config['theme'] ?? 'dark'
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Config not found']);
+        }
+        break;
+
+    case 'get_sharing_code':
+        $configFile = __DIR__ . '/../config/config.json';
+        if (file_exists($configFile)) {
+            $config = StorageService::readJson($configFile, false);
+            echo json_encode([
+                'success' => true,
+                'sharing_code' => $config['sharing_code'] ?? null
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Config not found']);
+        }
+        break;
+
+    case 'generate_sharing_code':
+        $configFile = __DIR__ . '/../config/config.json';
+        if (!file_exists($configFile)) {
+            echo json_encode(['success' => false, 'message' => 'Config not found']);
+            exit;
+        }
+        $config = StorageService::readJson($configFile, false);
+        
+        // Generate random 6 character alphanumeric string
+        $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $sharingCode = '';
+        for ($i = 0; $i < 6; $i++) {
+            $sharingCode .= $characters[rand(0, strlen($characters) - 1)];
+        }
+        
+        $config['sharing_code'] = $sharingCode;
+        StorageService::writeJson($configFile, $config, false);
+        
+        echo json_encode(['success' => true, 'sharing_code' => $sharingCode]);
+        break;
+
+    case 'update_config':
+        $configFile = __DIR__ . '/../config/config.json';
+        if (!file_exists($configFile)) {
+            echo json_encode(['success' => false, 'message' => 'Config not found']);
+            exit;
+        }
+        $config = StorageService::readJson($configFile, false);
+        
+        if (isset($payload['idle_timeout'])) {
+            $config['idle_timeout'] = intval($payload['idle_timeout']);
+            $_SESSION['config']['idle_timeout'] = $config['idle_timeout'];
+        }
+        if (isset($payload['theme'])) {
+            $config['theme'] = $payload['theme'];
+            $_SESSION['config']['theme'] = $config['theme'];
+        }
+        
+        StorageService::writeJson($configFile, $config, false);
+        echo json_encode(['success' => true]);
+        break;
+
+    case 'download_backup':
+        // Generate a zip of the storage directory
+        $storageDir = realpath(__DIR__ . '/../storage');
+        if (!$storageDir) {
+            echo json_encode(['success' => false, 'message' => 'Storage not found.']);
+            exit;
+        }
+        
+        $zipFile = tempnam(sys_get_temp_dir(), 'vault_backup_');
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            echo json_encode(['success' => false, 'message' => 'Failed to create zip file.']);
+            exit;
+        }
+        
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($storageDir),
+            RecursiveIteratorIterator::LEAVES_ONLY
+        );
+        
+        foreach ($files as $name => $file) {
+            if (!$file->isDir()) {
+                $filePath = $file->getRealPath();
+                $relativePath = substr($filePath, strlen($storageDir) + 1);
+                $zip->addFile($filePath, $relativePath);
+            }
+        }
+        $zip->close();
+        
+        // Stream the file
+        header('Content-Type: application/zip');
+        header('Content-disposition: attachment; filename=codervault_backup_' . date('Y-m-d_H-i-s') . '.zip');
+        header('Content-Length: ' . filesize($zipFile));
+        readfile($zipFile);
+        unlink($zipFile);
+        exit;
+
+    case 'export_share':
+        $projectId = $payload['project_id'] ?? null;
+        $itemId = $payload['item_id'] ?? null;
+        if (!$projectId) {
+            echo json_encode(['success' => false, 'message' => 'Project ID required']);
+            exit;
+        }
+
+        $configFile = __DIR__ . '/../config/config.json';
+        $config = file_exists($configFile) ? StorageService::readJson($configFile, false) : [];
+        if (empty($config['sharing_code'])) {
+            echo json_encode(['success' => false, 'message' => 'Sharing Code belum dikonfigurasi di Pengaturan.']);
+            exit;
+        }
+
+        $projectDir = __DIR__ . '/../storage/projects/' . $projectId;
+        if (!is_dir($projectDir)) {
+            echo json_encode(['success' => false, 'message' => 'Workspace tidak ditemukan.']);
+            exit;
+        }
+
+        $exportData = ['type' => $itemId ? 'item' : 'workspace'];
+        
+        if ($itemId) {
+            $itemFile = $projectDir . '/items/' . $itemId . '.json';
+            if (!file_exists($itemFile)) {
+                echo json_encode(['success' => false, 'message' => 'Item tidak ditemukan.']);
+                exit;
+            }
+            $exportData['data'] = StorageService::readJson($itemFile, true);
+        } else {
+            $projectFile = $projectDir . '/project.json';
+            $exportData['project'] = StorageService::readJson($projectFile, true);
+            $exportData['items'] = [];
+            $itemsDir = $projectDir . '/items/';
+            if (is_dir($itemsDir)) {
+                $itemFiles = glob($itemsDir . '*.json');
+                foreach ($itemFiles as $iFile) {
+                    $exportData['items'][] = StorageService::readJson($iFile, true);
+                }
+            }
+        }
+
+        // Encrypt with Sharing Code
+        CryptoService::init($config['sharing_code'], 'VaultShareSalt2026!');
+        $sharePayload = CryptoService::encrypt($exportData);
+        // Restore Master PIN context immediately
+        CryptoService::init($_SESSION['MASTER_PIN']);
+
+        echo json_encode(['success' => true, 'payload' => $sharePayload]);
+        break;
+
+    case 'import_share':
+        if (!isset($_FILES['share_file']) || !isset($_POST['sharing_code'])) {
+            echo json_encode(['success' => false, 'message' => 'File dan Sharing Code diperlukan.']);
+            exit;
+        }
+
+        $providedCode = strtoupper(trim($_POST['sharing_code']));
+        $payloadStr = file_get_contents($_FILES['share_file']['tmp_name']);
+
+        try {
+            CryptoService::init($providedCode, 'VaultShareSalt2026!');
+            $rawArray = CryptoService::decrypt($payloadStr);
+        } catch (\Exception $e) {
+            // Restore context
+            CryptoService::init($_SESSION['MASTER_PIN']);
+            echo json_encode(['success' => false, 'message' => 'Sharing Code salah atau file rusak.']);
+            exit;
+        }
+
+        // Restore Master PIN context to save
+        CryptoService::init($_SESSION['MASTER_PIN']);
+        
+        $importedCount = 0;
+        $skippedCount = 0;
+
+        if ($rawArray['type'] === 'item') {
+            $itemData = $rawArray['data'];
+            $projectId = $itemData['project_id'];
+            $projectDir = __DIR__ . '/../storage/projects/' . $projectId;
+            
+            // Auto create workspace if missing? Let's just create a dummy one or require it.
+            // Better to recreate the workspace minimally if it doesn't exist
+            if (!is_dir($projectDir)) {
+                mkdir($projectDir . '/items', 0777, true);
+                StorageService::writeJson($projectDir . '/project.json', [
+                    'id' => $projectId,
+                    'name' => 'Imported Workspace',
+                    'color' => '#6c757d',
+                    'updated_at' => date('c')
+                ], true);
+            }
+            
+            $itemFile = $projectDir . '/items/' . $itemData['id'] . '.json';
+            if (file_exists($itemFile)) {
+                $skippedCount++;
+            } else {
+                StorageService::writeJson($itemFile, $itemData, true);
+                $importedCount++;
+            }
+        } else if ($rawArray['type'] === 'workspace') {
+            $projData = $rawArray['project'];
+            $projectDir = __DIR__ . '/../storage/projects/' . $projData['id'];
+            
+            if (!is_dir($projectDir)) {
+                mkdir($projectDir . '/items', 0777, true);
+                StorageService::writeJson($projectDir . '/project.json', $projData, true);
+                $importedCount++; // Count workspace as 1
+            } else {
+                $skippedCount++;
+            }
+            
+            foreach ($rawArray['items'] as $itemData) {
+                $itemFile = $projectDir . '/items/' . $itemData['id'] . '.json';
+                if (file_exists($itemFile)) {
+                    $skippedCount++;
+                } else {
+                    StorageService::writeJson($itemFile, $itemData, true);
+                    $importedCount++;
+                }
+            }
+        }
+
+        echo json_encode([
+            'success' => true, 
+            'message' => "Import selesai. Berhasil: $importedCount, Dilewati (sudah ada): $skippedCount"
+        ]);
+        break;
+
+    case 'restore_backup':
+        if (!isset($_FILES['backup_zip'])) {
+            echo json_encode(['success' => false, 'message' => 'File ZIP tidak ditemukan.']);
+            exit;
+        }
+
+        $zipFile = $_FILES['backup_zip']['tmp_name'];
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile) !== true) {
+            echo json_encode(['success' => false, 'message' => 'Format ZIP tidak valid.']);
+            exit;
+        }
+
+        $storageDir = realpath(__DIR__ . '/../storage');
+        if (!$storageDir) {
+            echo json_encode(['success' => false, 'message' => 'Direktori storage tidak ditemukan.']);
+            exit;
+        }
+
+        // 1. Wipe existing projects safely
+        $projectDir = $storageDir . '/projects/';
+        if (is_dir($projectDir)) {
+            $dirs = array_filter(glob($projectDir . '*'), 'is_dir');
+            foreach ($dirs as $dir) {
+                $files = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::CHILD_FIRST
+                );
+                foreach ($files as $fileinfo) {
+                    $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+                    $todo($fileinfo->getRealPath());
+                }
+                rmdir($dir);
+            }
+        }
+
+        // 2. Extract Zip directly into storage (assuming the zip structure matches the 'projects/' root)
+        // Wait, our download_backup zipped the inside of `storage/`. So it has `projects/ariel...` inside.
+        $zip->extractTo($storageDir);
+        $zip->close();
+
+        echo json_encode(['success' => true, 'message' => 'Sistem berhasil di-restore!']);
+        break;
         http_response_code(444);
         echo json_encode(['success' => false, 'message' => 'Action unrecognized.']);
         break;

@@ -1,7 +1,7 @@
 // public/assets/js/app.js
 import { FormBuilder } from './components/FormBuilder.js?v=6';
 import { VaultUI } from './components/UI.js?v=7';
-import { SearchIndex } from './components/SearchIndex.js?v=5';
+import { SearchIndex } from './components/SearchIndex.js?v=10';
 
 class ProjectVaultApp {
     constructor() {
@@ -174,17 +174,191 @@ class ProjectVaultApp {
             });
         }
         
+        // Settings Event Listeners
+        const settingsTimeoutSelect = document.getElementById('settingsTimeoutSelect');
+        if (settingsTimeoutSelect) {
+            settingsTimeoutSelect.addEventListener('change', async (e) => {
+                const newTimeout = parseInt(e.target.value);
+                this.state.idleTimeout = newTimeout;
+                await this.makeRequest('api.php?action=update_config', {
+                    method: 'POST',
+                    body: { idle_timeout: newTimeout }
+                });
+                VaultUI.showToast('Durasi Kunci Otomatis berhasil diperbarui.', 'success');
+            });
+        }
+
+        const themeRadios = document.querySelectorAll('input[name="themeRadios"]');
+        if (themeRadios) {
+            themeRadios.forEach(radio => {
+                radio.addEventListener('change', async (e) => {
+                    const newTheme = e.target.value;
+                    document.documentElement.setAttribute('data-bs-theme', newTheme);
+                    
+                    const btnIcon = document.querySelector('#themeToggleBtn i');
+                    if (btnIcon) {
+                        btnIcon.className = newTheme === 'light' ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+                    }
+                    
+                    await this.makeRequest('api.php?action=update_config', {
+                        method: 'POST',
+                        body: { theme: newTheme }
+                    });
+                });
+            });
+        }
+
+        const changePinForm = document.getElementById('changePinForm');
+        if (changePinForm) {
+            changePinForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const oldPin = document.getElementById('oldPinInput').value;
+                const newPin = document.getElementById('newPinInput').value;
+                const confirmPin = document.getElementById('confirmNewPinInput').value;
+                
+                if (newPin !== confirmPin) {
+                    VaultUI.showToast('PIN baru dan konfirmasi tidak cocok.', 'danger');
+                    return;
+                }
+                
+                const btn = document.getElementById('changePinBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...';
+                
+                const res = await this.makeRequest('api.php?action=change_pin', {
+                    method: 'POST',
+                    body: { old_pin: oldPin, new_pin: newPin }
+                });
+                
+                if (res && res.success) {
+                    VaultUI.showToast('PIN Master berhasil diubah!', 'success');
+                    changePinForm.reset();
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = 'Ubah PIN Sekarang';
+            });
+        }
+        
+        const regenerateSharingCodeBtn = document.getElementById('regenerateSharingCodeBtn');
+        if (regenerateSharingCodeBtn) {
+            regenerateSharingCodeBtn.addEventListener('click', async () => {
+                regenerateSharingCodeBtn.disabled = true;
+                regenerateSharingCodeBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                const res = await this.makeRequest('api.php?action=generate_sharing_code');
+                if (res && res.success) {
+                    document.getElementById('settingsSharingCodeDisplay').textContent = res.sharing_code;
+                    this.showToast('Sharing Code berhasil diperbarui.', 'success');
+                }
+                regenerateSharingCodeBtn.disabled = false;
+                regenerateSharingCodeBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Regenerate';
+            });
+        }
+
+        const copySharingCodeBtn = document.getElementById('copySharingCodeBtn');
+        if (copySharingCodeBtn) {
+            copySharingCodeBtn.addEventListener('click', () => {
+                const code = document.getElementById('settingsSharingCodeDisplay').textContent.trim();
+                if (code && code !== '------') {
+                    navigator.clipboard.writeText(code);
+                    copySharingCodeBtn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
+                    setTimeout(() => copySharingCodeBtn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
+                }
+            });
+        }
+        
+        const restoreBackupForm = document.getElementById('restoreBackupForm');
+        if (restoreBackupForm) {
+            restoreBackupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const fileInput = document.getElementById('backupZipInput');
+                if (!fileInput.files.length) return;
+
+                if (!confirm('PERINGATAN KERAS! Anda yakin ingin menghapus semua data Anda saat ini dan menggantinya dengan backup ini?')) {
+                    return;
+                }
+
+                const btn = document.getElementById('restoreBackupBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mereset...';
+
+                const formData = new FormData();
+                formData.append('backup_zip', fileInput.files[0]);
+
+                try {
+                    const response = await fetch('api.php?action=restore_backup', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const res = await response.json();
+                    
+                    if (res.success) {
+                        this.showToast('Sistem berhasil di-restore! Memuat ulang...', 'success');
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        this.showToast(res.message || 'Gagal restore backup.', 'danger');
+                    }
+                } catch (err) {
+                    this.showToast('Terjadi kesalahan jaringan.', 'danger');
+                }
+
+                btn.disabled = false;
+                btn.innerHTML = 'Restore Sekarang';
+            });
+        }
+        
+        const importShareForm = document.getElementById('importShareForm');
+        if (importShareForm) {
+            importShareForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const codeInput = document.getElementById('importSharingCode').value;
+                const fileInput = document.getElementById('importShareFile');
+                if (!fileInput.files.length) return;
+
+                const btn = document.getElementById('importShareBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengimpor...';
+
+                const formData = new FormData();
+                formData.append('sharing_code', codeInput);
+                formData.append('share_file', fileInput.files[0]);
+
+                try {
+                    const response = await fetch('api.php?action=import_share', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const res = await response.json();
+                    
+                    if (res.success) {
+                        this.showToast(res.message, 'success');
+                        bootstrap.Modal.getInstance(document.getElementById('importShareModal'))?.hide();
+                        importShareForm.reset();
+                        this.fetchProjects(); // Reload data
+                    } else {
+                        this.showToast(res.message || 'Gagal mengimpor data.', 'danger');
+                    }
+                } catch (err) {
+                    this.showToast('Terjadi kesalahan jaringan.', 'danger');
+                }
+
+                btn.disabled = false;
+                btn.innerHTML = 'Import Sekarang';
+            });
+        }
+        
         this.setupAutoSave();
         this.setupInactivityLock();
     }
 
     setupInactivityLock() {
         let inactivityTimer;
-        const lockTime = 10 * 1000; // 10 detik
 
         const resetTimer = () => {
             clearTimeout(inactivityTimer);
             if (this.isUnlocked && !this.state.mustChangePin) {
+                // Read from state, default to 10s if not loaded yet
+                const lockTime = (this.state.idleTimeout || 10) * 1000;
                 inactivityTimer = setTimeout(() => {
                     console.log("Inactivity limit reached, locking vault...");
                     this.logout();
@@ -495,6 +669,16 @@ class ProjectVaultApp {
         });
     }
 
+    async fetchProjects() {
+        const res = await this.makeRequest('api.php?action=get_projects');
+        if (res && res.success) {
+            this.state.projects = res.projects;
+            if (!this.state.activeProject) {
+                VaultUI.renderProjectList(this);
+            }
+        }
+    }
+
     async loadWorkspace() {
         this.isUnlocked = true;
         // Hydrate Dynamic Configuration Type Schemas
@@ -661,12 +845,102 @@ class ProjectVaultApp {
         VaultUI.openProjectModal(this, isEdit);
     }
 
+    async openSettings() {
+        const res = await this.makeRequest('api.php?action=get_config');
+        if (res && res.success && res.config) {
+            this.state.idleTimeout = res.config.idle_timeout;
+            document.getElementById('settingsTimeoutSelect').value = res.config.idle_timeout;
+            
+            const theme = res.config.theme || 'dark';
+            if (theme === 'light') {
+                document.getElementById('themeRadioLight').checked = true;
+            } else {
+                document.getElementById('themeRadioDark').checked = true;
+            }
+            
+            const shareRes = await this.makeRequest('api.php?action=get_sharing_code');
+            if (shareRes && shareRes.success && shareRes.sharing_code) {
+                document.getElementById('settingsSharingCodeDisplay').textContent = shareRes.sharing_code;
+            } else {
+                document.getElementById('settingsSharingCodeDisplay').textContent = '------';
+            }
+            
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('settingsModal')).show();
+        }
+    }
+
+    downloadBackup() {
+        window.location.href = 'api.php?action=download_backup';
+    }
+
     async deleteItem() {
         const itemId = document.getElementById('itemFormId').value;
         if (!itemId) return;
         
         const deleteModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal'));
         deleteModal.show();
+    }
+
+    async exportShare(itemId = null) {
+        if (!this.state.activeProject) return;
+        const projectId = this.state.activeProject.id;
+        
+        const res = await this.makeRequest('api.php?action=export_share', {
+            method: 'POST',
+            body: { project_id: projectId, item_id: itemId }
+        });
+        
+        if (res && res.success) {
+            // Initiate download
+            const blob = new Blob([res.payload], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = (itemId ? `item_${itemId}` : `workspace_${projectId}`) + '.cvshare';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            this.showToast('Data berhasil diekspor dengan aman!', 'success');
+        } else {
+            this.showToast(res ? res.message : 'Gagal mengekspor data.', 'danger');
+            if (res && res.message && res.message.includes('Sharing Code')) {
+                this.openSettings();
+            }
+        }
+    }
+
+    async deleteProject() {
+        if (!this.state.activeProject) return;
+        const projectId = this.state.activeProject.id;
+        
+        if (!confirm(`Apakah Anda yakin ingin menghapus Workspace "${this.state.activeProject.name}" secara permanen beserta semua item di dalamnya?`)) {
+            return;
+        }
+        
+        const btn = document.getElementById('projectFormDeleteBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghapus...';
+        }
+        
+        const res = await this.makeRequest('api.php?action=delete_project', {
+            method: 'POST',
+            body: { project_id: projectId }
+        });
+        
+        if (res && res.success) {
+            this.showToast('Workspace berhasil dihapus!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('projectModal'))?.hide();
+            this.closeProject();
+            this.fetchProjects(); // Refresh the list
+        } else {
+            this.showToast(res ? res.message : 'Gagal menghapus Workspace.', 'danger');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-trash"></i> Remove';
+            }
+        }
     }
 
     async confirmDeleteItem() {

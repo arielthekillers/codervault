@@ -89,8 +89,8 @@ export class VaultUI {
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button class="btn rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 40px; height: 40px; background-color: transparent; border: 1px solid var(--border-color); color: var(--text-muted); transition: all 0.2s;" onclick="app.renderChangePinModal(false)" title="Ubah PIN Master">
-                        <i class="bi bi-gear-fill"></i>
+                    <button class="btn rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 40px; height: 40px; background-color: transparent; border: 1px solid var(--border-color); color: var(--text-muted); transition: all 0.2s;" onclick="VaultEngine.exportShare(null)" title="Bagikan / Ekspor Workspace ini">
+                        <i class="bi bi-share-fill"></i>
                     </button>
                     <button class="btn rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 40px; height: 40px; transition: all 0.2s; ${app.state.groupByType ? `background-color: ${project.color}; color: white; border: none;` : `background-color: transparent; border: 1px solid var(--border-color); color: var(--text-muted);`}" onclick="VaultEngine.toggleGroupBy()" title="Toggle Group by Type">
                         <i class="bi ${app.state.groupByType ? 'bi-grid-fill' : 'bi-grid'}"></i>
@@ -125,7 +125,15 @@ export class VaultUI {
 
                 let html = '';
                 if (items.length === 0) {
-                    html = `<div class="row g-3"><div class="col-12 text-center p-5 text-muted border border-dashed border-secondary rounded bg-dark-edge">Belum ada item keamanan yang tersimpan di proyek ini.</div></div>`;
+                    html = `
+                    <div class="col-12 text-center py-5">
+                        <div class="p-5 border border-dashed border-secondary rounded-4 bg-dark-edge mx-auto" style="max-width: 500px;">
+                            <i class="bi bi-box-seam text-muted display-4 mb-3 d-block"></i>
+                            <h5 style="color: var(--text-primary)">Workspace Kosong</h5>
+                            <p class="text-muted small mb-4">Belum ada item yang tersimpan di workspace ini. Mulai tambahkan kredensial, catatan, atau file penting Anda dengan aman.</p>
+                            <button class="btn btn-outline-primary" onclick="VaultEngine.openTypeSelectionModal()">Tambah Item Pertama</button>
+                        </div>
+                    </div>`;
                 } else {
                     const sortedItems = [...items].sort((a, b) => a.type.localeCompare(b.type));
                     
@@ -208,11 +216,15 @@ export class VaultUI {
 
         if (isEdit) {
             deleteBtn.classList.remove('d-none');
+            const shareBtn = document.getElementById('itemFormShareBtn');
+            if (shareBtn) shareBtn.classList.remove('d-none');
             document.getElementById('itemModalLabel').innerText = `Edit ${cfg.label}`;
             document.getElementById('itemFormTitle').value = typeOrItem.title;
             app.renderDynamicFormFields(itemType, typeOrItem.fields, true);
         } else {
             deleteBtn.classList.add('d-none');
+            const shareBtn = document.getElementById('itemFormShareBtn');
+            if (shareBtn) shareBtn.classList.add('d-none');
             document.getElementById('itemModalLabel').innerText = `Tambah ${cfg.label}`;
             app.renderDynamicFormFields(itemType, {}, false);
         }
@@ -229,8 +241,15 @@ export class VaultUI {
         const modalEl = document.getElementById('projectModal');
         const form = document.getElementById('projectCreateForm');
         
+        const deleteBtn = document.getElementById('projectFormDeleteBtn');
+        if (deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = '<i class="bi bi-trash"></i> Remove';
+        }
+        
         if (isEdit && app.state.activeProject) {
             document.querySelector('#projectModal .modal-title').innerText = "Edit Workspace";
+            if (deleteBtn) deleteBtn.classList.remove('d-none');
             const project = app.state.activeProject;
             document.getElementById('projectFormId').value = project.id;
             document.getElementById('projectFormName').value = project.name;
@@ -250,6 +269,7 @@ export class VaultUI {
             });
         } else {
             document.querySelector('#projectModal .modal-title').innerText = "Buat Workspace Baru";
+            if (deleteBtn) deleteBtn.classList.add('d-none');
             form.reset();
             document.getElementById('projectFormId').value = '';
             

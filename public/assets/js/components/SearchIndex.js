@@ -12,21 +12,78 @@ export class SearchIndex {
         let matches = [];
 
         // --- SYSTEM COMMANDS ---
-        if (q === 'logout' || q === 'lock' || q === 'exit') {
-            matches.push({
-                type: 'SYSTEM',
-                label: 'Kunci Vault Sekarang (Logout)',
-                desc: 'Tutup semua data dan tampilkan layar kunci PIN',
-                action: () => {
-                    bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
-                    VaultEngine.logout();
+        const systemCommands = [
+            {
+                aliases: ['logout', 'lock', 'exit'],
+                item: {
+                    type: 'SYSTEM',
+                    label: 'Kunci Vault Sekarang (Logout)',
+                    desc: 'Tutup semua data dan tampilkan layar kunci PIN',
+                    action: () => {
+                        bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                        VaultEngine.logout();
+                    }
                 }
-            });
-            return matches;
-        }
+            },
+            {
+                aliases: ['darkmode', 'lightmode', 'dark mode', 'light mode', 'theme', 'tema'],
+                item: {
+                    type: 'SYSTEM',
+                    label: 'Ganti Tema (Dark / Light Mode)',
+                    desc: 'Beralih antara mode gelap dan mode terang',
+                    action: () => {
+                        bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                        document.getElementById('themeToggleBtn')?.click();
+                    }
+                }
+            },
+            {
+                aliases: ['add workspace', 'new workspace', 'buat workspace'],
+                item: {
+                    type: 'SYSTEM',
+                    label: 'Buat Workspace Baru',
+                    desc: 'Buka formulir pembuatan ruang kerja',
+                    action: () => {
+                        bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                        VaultEngine.openProjectModal();
+                    }
+                }
+            },
+            {
+                aliases: ['settings', 'pengaturan', 'config'],
+                item: {
+                    type: 'SYSTEM',
+                    label: 'Pengaturan Sistem',
+                    desc: 'Buka konfigurasi CoderVault',
+                    action: () => {
+                        bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                        VaultEngine.openSettings();
+                    }
+                }
+            },
+            {
+                aliases: ['import', 'impor'],
+                item: {
+                    type: 'SYSTEM',
+                    label: 'Import Data (.cvshare)',
+                    desc: 'Impor Workspace atau Item yang dibagikan teman Anda',
+                    action: () => {
+                        bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('importShareModal')).show();
+                    }
+                }
+            }
+        ];
+
+        // Push any system command where the alias starts with the typed query
+        systemCommands.forEach(cmd => {
+            if (cmd.aliases.some(alias => alias.startsWith(q))) {
+                matches.push(cmd.item);
+            }
+        });
         
         // --- ADD LAUNCHER MODE ---
-        if (q.startsWith('add ') || q === 'add') {
+        if ((q.startsWith('add ') || q === 'add') && q !== 'add workspace') {
             const addQuery = q.replace(/^add\s*/i, '').trim();
             const parts = addQuery.split(/\s+/).filter(w => w);
             const typeQ = parts.length > 0 ? parts[0] : '';
@@ -166,10 +223,10 @@ export class SearchIndex {
         }
 
         resultsContainer.innerHTML = matches.map((m, index) => `
-            <div class="p-2 px-3 border-bottom border-secondary search-result-item d-flex justify-content-between align-items-center cursor-pointer ${index === 0 ? 'active-search-item bg-secondary bg-opacity-25' : ''}" data-index="${index}">
+            <div class="p-2 px-3 border-bottom search-result-item d-flex justify-content-between align-items-center cursor-pointer ${index === 0 ? 'active-search-item bg-secondary bg-opacity-25' : ''}" data-index="${index}" style="border-bottom-color: var(--border-color) !important;">
                 <div>
                     <span class="badge me-2 text-uppercase" style="background-color: var(--bg-dark-edge); border: 1px solid var(--border-color); color: var(--text-muted); font-size:10px;">${m.type}</span>
-                    <strong class="small d-block d-md-inline-block" style="color: var(--text-primary);">${m.label}</strong>
+                    <span class="small fw-semibold d-block d-md-inline-block" style="color: var(--text-primary);">${m.label}</span>
                     <div class="text-muted small mt-1 text-truncate" style="max-width: 500px;">${m.desc}</div>
                 </div>
                 <i class="bi bi-arrow-return-left text-muted small opacity-50"></i>

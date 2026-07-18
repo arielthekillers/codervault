@@ -50,22 +50,22 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
     <div class="modal fade" id="commandPaletteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content bg-card shadow-lg overflow-hidden" style="border: 1px solid var(--border-color);">
-                <div class="p-3 border-bottom border-secondary d-flex align-items-center">
-                    <i class="bi bi-magic text-muted me-3 fs-5"></i>
-                    <input type="text" id="globalSearchInput" class="form-control form-control-vault border-0 bg-transparent fs-5 p-0 shadow-none" style="color: var(--text-primary);" placeholder="Ketik perintah, atau cari data..." autocomplete="off">
-                    <span class="badge bg-dark border border-secondary text-muted ms-2">ESC</span>
+                <div class="p-3 d-flex align-items-center">
+                    <i class="bi bi-magic text-primary me-3 fs-4"></i>
+                    <input type="text" id="globalSearchInput" class="form-control form-control-vault border-0 bg-transparent fs-5 p-0 shadow-none" style="color: var(--text-primary);" placeholder="Ketik perintah Magic Launcher, atau cari data..." autocomplete="off">
+                    <span class="badge ms-2" style="background-color: var(--bg-dark-edge); color: var(--text-muted); border: 1px solid var(--border-color);">ESC</span>
                 </div>
                 <div class="modal-body p-0" id="searchResultsContainer" style="max-height: 450px;">
                     <div class="p-4 text-center text-muted small">
-                        Ketik untuk mulai mencari...
+                        Ketik untuk mulai menggunakan Magic Launcher...
                     </div>
                 </div>
-                <div class="modal-footer p-2 bg-dark-edge border-top border-secondary d-flex justify-content-between text-muted small">
+                <div class="modal-footer p-2 bg-dark-edge border-0 d-flex justify-content-between text-muted small">
                     <div>
-                        <span class="me-2"><kbd class="bg-dark text-muted border border-secondary">↑↓</kbd> Navigasi</span>
-                        <span><kbd class="bg-dark text-muted border border-secondary">↵</kbd> Pilih</span>
+                        <span class="me-2"><kbd style="background-color: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border-color);">↑↓</kbd> Navigasi</span>
+                        <span><kbd style="background-color: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border-color);">↵</kbd> Pilih</span>
                     </div>
-                    <div>Indeks CoderVault</div>
+                    <div>Magic Launcher</div>
                 </div>
             </div>
         </div>
@@ -116,6 +116,9 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
                     <div class="modal-footer border-0 pt-0 d-flex justify-content-between align-items-center">
                         <button type="button" class="btn btn-outline-danger d-none" id="itemFormDeleteBtn" onclick="VaultEngine.deleteItem()">
                             <i class="bi bi-trash"></i> Remove
+                        </button>
+                        <button type="button" class="btn btn-outline-info d-none ms-2" id="itemFormShareBtn" onclick="VaultEngine.exportShare(document.getElementById('itemFormId').value)">
+                            <i class="bi bi-share"></i> Share
                         </button>
                         <div class="ms-auto">
                             <button type="button" class="btn btn-primary px-4" id="itemFormSubmitBtn">Save</button>
@@ -180,8 +183,186 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer border-0 pt-0">
-                        <button type="submit" class="btn btn-primary px-4">Save</button>
+                    <div class="modal-footer border-0 pt-0 d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-outline-danger d-none" id="projectFormDeleteBtn" onclick="VaultEngine.deleteProject()">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                        <div class="ms-auto">
+                            <button type="submit" class="btn btn-primary px-4">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color); min-height: 500px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fs-5 fw-semibold" style="color: var(--text-primary)">
+                        <i class="bi bi-gear-fill me-2 text-muted"></i>Pengaturan Sistem
+                    </h5>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body p-0 mt-3 border-top d-flex flex-column" style="border-color: var(--border-color) !important;">
+                    <div class="d-flex flex-grow-1 flex-column flex-md-row">
+                        <!-- Sidebar / Tabs -->
+                        <div class="p-3 border-end" style="width: 100%; max-width: 250px; background-color: var(--bg-dark-edge); border-color: var(--border-color) !important;">
+                            <div class="nav flex-column nav-pills" id="settingsTabs" role="tablist" aria-orientation="vertical">
+                                <button class="nav-link text-start active px-3 py-2 mb-1 w-100" id="settings-security-tab" data-bs-toggle="pill" data-bs-target="#settings-security" type="button" role="tab">
+                                    <i class="bi bi-shield-lock me-2"></i>Keamanan
+                                </button>
+                                <button class="nav-link text-start px-3 py-2 mb-1 w-100" id="settings-appearance-tab" data-bs-toggle="pill" data-bs-target="#settings-appearance" type="button" role="tab">
+                                    <i class="bi bi-palette me-2"></i>Personalisasi
+                                </button>
+                                <button class="nav-link text-start px-3 py-2 w-100" id="settings-data-tab" data-bs-toggle="pill" data-bs-target="#settings-data" type="button" role="tab">
+                                    <i class="bi bi-database me-2"></i>Data & Backup
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Area -->
+                        <div class="p-4 flex-grow-1 overflow-auto tab-content" id="settingsTabsContent">
+                            <!-- Security Tab -->
+                            <div class="tab-pane fade show active" id="settings-security" role="tabpanel">
+                                <h6 class="fw-bold mb-4" style="color: var(--text-primary)">Pengaturan Keamanan</h6>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label small text-muted fw-semibold">Durasi Kunci Otomatis (Auto-Lock Timeout)</label>
+                                    <select class="form-select form-control-vault mb-2" id="settingsTimeoutSelect">
+                                        <option value="10">10 Detik</option>
+                                        <option value="30">30 Detik</option>
+                                        <option value="60">1 Menit</option>
+                                        <option value="300">5 Menit</option>
+                                    </select>
+                                    <div class="form-text small text-muted">Berapa lama Vault akan terkunci secara otomatis jika Anda tidak aktif mengetik atau menggerakkan kursor.</div>
+                                </div>
+                                
+                                <hr style="border-color: var(--border-color);">
+                                
+                                <div class="mb-4 mt-4">
+                                    <label class="form-label small text-muted fw-semibold">Kode Berbagi (Sharing Code)</label>
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <div class="form-control form-control-vault bg-dark text-center fw-bold fs-5 font-monospace text-primary w-50" id="settingsSharingCodeDisplay" style="letter-spacing: 2px;">
+                                            ------
+                                        </div>
+                                        <button class="btn btn-outline-secondary" type="button" id="regenerateSharingCodeBtn" title="Buat Kode Baru">
+                                            <i class="bi bi-arrow-repeat"></i> Regenerate
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button" id="copySharingCodeBtn" title="Salin Kode">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text small text-muted">Berikan kode ini kepada teman Anda bersamaan dengan file <code class="text-primary">.cvshare</code> yang Anda ekspor. Klik <strong>Regenerate</strong> untuk menghanguskan kode lama.</div>
+                                </div>
+
+                                <hr style="border-color: var(--border-color);">
+                                
+                                <form id="changePinForm" class="mt-4">
+                                    <label class="form-label small text-muted fw-semibold mb-3">Ganti PIN Master</label>
+                                    <div class="mb-3">
+                                        <input type="password" class="form-control form-control-vault" id="oldPinInput" placeholder="PIN Lama" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="password" class="form-control form-control-vault" id="newPinInput" placeholder="PIN Baru (Minimal 6 Digit)" minlength="6" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="password" class="form-control form-control-vault" id="confirmNewPinInput" placeholder="Konfirmasi PIN Baru" minlength="6" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100" id="changePinBtn">Ubah PIN Sekarang</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Appearance Tab -->
+                            <div class="tab-pane fade" id="settings-appearance" role="tabpanel">
+                                <h6 class="fw-bold mb-4" style="color: var(--text-primary)">Tampilan Antarmuka</h6>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label small text-muted fw-semibold">Tema Sistem</label>
+                                    <div class="d-flex gap-3 mt-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="themeRadios" id="themeRadioDark" value="dark">
+                                            <label class="form-check-label" for="themeRadioDark" style="color: var(--text-primary);">
+                                                Dark Mode
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="themeRadios" id="themeRadioLight" value="light">
+                                            <label class="form-check-label" for="themeRadioLight" style="color: var(--text-primary);">
+                                                Light Mode
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Data Tab -->
+                            <div class="tab-pane fade" id="settings-data" role="tabpanel">
+                                <h6 class="fw-bold mb-4" style="color: var(--text-primary)">Manajemen Data</h6>
+                                
+                                <div class="p-3 rounded mb-4" style="background-color: rgba(13, 110, 253, 0.05); border: 1px solid rgba(13, 110, 253, 0.2);">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-cloud-download text-primary me-2 fs-5"></i>
+                                        <strong style="color: var(--text-primary);">Unduh Backup Vault</strong>
+                                    </div>
+                                    <p class="small text-muted mb-3">Unduh seluruh direktori workspace dan struktur data Anda ke dalam satu file `.zip`. Data di dalam `.zip` ini masih terenkripsi aman secara native menggunakan PIN Anda.</p>
+                                    <button class="btn btn-outline-primary btn-sm fw-semibold" onclick="VaultEngine.downloadBackup()">
+                                        Download Backup (.zip)
+                                    </button>
+                                </div>
+                                
+                                <div class="p-3 rounded mb-4" style="background-color: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2);">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-cloud-upload text-danger me-2 fs-5"></i>
+                                        <strong style="color: var(--text-primary);">Restore Sistem (Wipe & Replace)</strong>
+                                    </div>
+                                    <p class="small text-muted mb-3">Unggah file <code class="text-danger">.zip</code> hasil backup Anda. <strong>PERINGATAN Keras:</strong> Seluruh data di brankas saat ini akan dihapus permanen dan ditimpa secara total dengan isi dari backup tersebut!</p>
+                                    <form id="restoreBackupForm" class="d-flex align-items-center gap-2">
+                                        <input type="file" class="form-control form-control-vault form-control-sm" id="backupZipInput" accept=".zip" required>
+                                        <button type="submit" class="btn btn-outline-danger btn-sm fw-semibold text-nowrap" id="restoreBackupBtn">
+                                            Restore Sekarang
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 d-flex justify-content-between align-items-center bg-card">
+                    <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>Tersimpan otomatis.</span>
+                    <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">Selesai</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Import Share Modal -->
+    <div class="modal fade" id="importShareModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fs-6 fw-semibold" style="color: var(--text-primary)">
+                        <i class="bi bi-box-arrow-in-down me-2 text-primary"></i>Import Data (.cvshare)
+                    </h5>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <form id="importShareForm">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">Sharing Code</label>
+                            <input type="text" id="importSharingCode" class="form-control form-control-vault text-center fs-5 fw-bold font-monospace" placeholder="A8X2F9" maxlength="6" required style="letter-spacing: 2px; text-transform: uppercase;">
+                            <div class="form-text small text-muted text-center mt-2">Masukkan 6 digit Sharing Code dari teman Anda.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">File Data</label>
+                            <input type="file" id="importShareFile" class="form-control form-control-vault form-control-sm" accept=".cvshare" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 pt-0 d-flex justify-content-between align-items-center">
+                        <span class="small text-muted"><i class="bi bi-shield-lock me-1"></i>Aman & Terenkripsi</span>
+                        <button type="submit" class="btn btn-primary px-4" id="importShareBtn">Import Sekarang</button>
                     </div>
                 </form>
             </div>
@@ -214,7 +395,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
     <!-- ========================================================== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script type="module" src="assets/js/app.js?v=16"></script>
+    <script type="module" src="assets/js/app.js?v=22"></script>
 
     <!-- Global Interface Action Proxies for FormBuilder Inline Click Handlers -->
     <script>
