@@ -312,6 +312,17 @@ class ProjectVaultApp {
         }
         
         const importShareForm = document.getElementById('importShareForm');
+        const importShareModalEl = document.getElementById('importShareModal');
+        
+        if (importShareModalEl) {
+            importShareModalEl.addEventListener('shown.bs.modal', () => {
+                document.getElementById('importSharingCode').focus();
+            });
+            importShareModalEl.addEventListener('hidden.bs.modal', () => {
+                if (importShareForm) importShareForm.reset();
+            });
+        }
+
         if (importShareForm) {
             importShareForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
