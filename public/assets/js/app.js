@@ -175,18 +175,12 @@ class ProjectVaultApp {
     }
 
     async logout() {
-        document.querySelectorAll('.modal.show').forEach(m => {
-            try {
-                const bModal = bootstrap.Modal.getOrCreateInstance(m);
-                if (bModal) bModal.hide();
-            } catch (e) {
-                console.warn("Failed to hide modal via API", e);
-                m.classList.remove('show');
-                m.style.display = 'none';
-            }
+        // Synchronously force-hide all modals and clean up backdrops to prevent focus traps
+        document.querySelectorAll('.modal').forEach(m => {
+            m.classList.remove('show');
+            m.style.display = 'none';
+            m.setAttribute('aria-hidden', 'true');
         });
-        
-        // Failsafe: forcibly remove any lingering backdrops and focus traps
         document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
         document.body.classList.remove('modal-open');
         document.body.style.overflow = '';
@@ -203,13 +197,10 @@ class ProjectVaultApp {
     renderLockScreen(isFirstLaunch = false) {
         const mainContainer = document.getElementById('appShell');
         
-        // Blur background if there's content
-        if (mainContainer.innerHTML.trim() !== '') {
-            mainContainer.style.filter = 'blur(8px)';
-            mainContainer.style.pointerEvents = 'none';
-        } else {
-            mainContainer.innerHTML = '<div class="vh-100 bg-app"></div>';
-        }
+        // SECURITY ENHANCEMENT: Completely wipe the DOM so nothing can be read via Inspect Element
+        mainContainer.innerHTML = '<div class="vh-100 bg-app"></div>';
+        mainContainer.style.filter = '';
+        mainContainer.style.pointerEvents = '';
 
         let lockOverlay = document.getElementById('lockOverlay');
         if (!lockOverlay) {
@@ -245,7 +236,9 @@ class ProjectVaultApp {
         `;
 
         const inputs = lockOverlay.querySelectorAll('.pin-digit');
-        if (inputs.length > 0) inputs[0].focus();
+        if (inputs.length > 0) {
+            setTimeout(() => inputs[0].focus(), 150);
+        }
 
         const submitPin = async () => {
             const pin = Array.from(inputs).map(i => i.dataset.val || '').join('');
