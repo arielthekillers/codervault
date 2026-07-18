@@ -1012,6 +1012,9 @@ class ProjectVaultApp {
     }
 
     async handleItemSubmit(isAutoSave = false) {
+        if (this.isSavingItem) return;
+        this.isSavingItem = true;
+
         try {
             const form = document.getElementById('itemEngineForm');
             
@@ -1065,6 +1068,7 @@ class ProjectVaultApp {
 
                 if (!isAutoSave) {
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('itemEngineModal'))?.hide();
+                    this.showToast('Item berhasil disimpan!', 'success');
                     await this.switchProject(this.state.activeProject.id);
                 } else {
                     // Update the active project list silently to include the draft without a full reload
@@ -1081,6 +1085,8 @@ class ProjectVaultApp {
         } catch (err) {
             alert("JS Error in handleItemSubmit:\n" + err.message + "\n" + err.stack);
             console.error(err);
+        } finally {
+            this.isSavingItem = false;
         }
     }
 
@@ -1104,6 +1110,7 @@ class ProjectVaultApp {
         });
 
         if (res) {
+            this.showToast('Workspace berhasil disimpan!', 'success');
             bootstrap.Modal.getOrCreateInstance(document.getElementById('projectModal'))?.hide();
             document.getElementById('projectCreateForm').reset();
             await this.loadWorkspace();
@@ -1136,7 +1143,49 @@ class ProjectVaultApp {
 
 
     showToast(message, variant = "info") {
-        console.log(`[Vault Engine Log - ${variant.toUpperCase()}]: ${message}`);
+        let container = document.getElementById('vaultToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'vaultToastContainer';
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-4';
+            container.style.zIndex = '1070';
+            document.body.appendChild(container);
+        }
+
+        const iconMap = {
+            'success': 'bi-check-circle-fill text-success',
+            'danger': 'bi-x-octagon-fill text-danger',
+            'warning': 'bi-exclamation-triangle-fill text-warning',
+            'info': 'bi-info-circle-fill text-info'
+        };
+
+        const toastEl = document.createElement('div');
+        // Custom styling for premium feel
+        toastEl.className = `toast align-items-center border-0 shadow-lg mb-3`;
+        toastEl.style.backgroundColor = 'var(--bg-card)';
+        toastEl.style.borderLeft = `4px solid var(--bs-${variant})`;
+        toastEl.style.borderRadius = '0.5rem';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        
+        toastEl.innerHTML = `
+            <div class="d-flex p-1">
+                <div class="toast-body d-flex align-items-center fw-medium flex-grow-1" style="color: var(--text-primary); font-size: 0.95rem;">
+                    <i class="bi ${iconMap[variant] || iconMap.info} fs-5 me-3"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close shadow-none me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+
+        container.appendChild(toastEl);
+        const bsToast = new bootstrap.Toast(toastEl, { delay: 3500 });
+        bsToast.show();
+
+        toastEl.addEventListener('hidden.bs.toast', () => {
+            toastEl.remove();
+        });
     }
 }
 
