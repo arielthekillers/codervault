@@ -1,0 +1,24 @@
+# User Data and Configuration
+storage/*
+!storage/.gitkeep
+config/*
+!config/.gitkeep
+
+# System/IDE Files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.gemini/
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
