@@ -3,6 +3,7 @@ storage/*
 !storage/.gitkeep
 config/*
 !config/.gitkeep
+!config/item-types.json
 
 # System/IDE Files
 .vscode/
