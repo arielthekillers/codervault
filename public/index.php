@@ -51,8 +51,8 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content bg-card shadow-lg overflow-hidden" style="border: 1px solid var(--border-color);">
                 <div class="p-3 border-bottom border-secondary d-flex align-items-center">
-                    <i class="bi bi-search text-muted me-3 fs-5"></i>
-                    <input type="text" id="globalSearchInput" class="form-control form-control-vault border-0 bg-transparent fs-5 p-0 shadow-none text-white" placeholder="Cari proyek, kredensial, konfigurasi, tag..." autocomplete="off">
+                    <i class="bi bi-magic text-muted me-3 fs-5"></i>
+                    <input type="text" id="globalSearchInput" class="form-control form-control-vault border-0 bg-transparent fs-5 p-0 shadow-none" style="color: var(--text-primary);" placeholder="Ketik perintah, atau cari data..." autocomplete="off">
                     <span class="badge bg-dark border border-secondary text-muted ms-2">ESC</span>
                 </div>
                 <div class="modal-body p-0" id="searchResultsContainer" style="max-height: 450px;">
@@ -214,7 +214,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
     <!-- ========================================================== -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script type="module" src="assets/js/app.js?v=10"></script>
+    <script type="module" src="assets/js/app.js?v=16"></script>
 
     <!-- Global Interface Action Proxies for FormBuilder Inline Click Handlers -->
     <script>

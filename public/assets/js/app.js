@@ -1,7 +1,7 @@
 // public/assets/js/app.js
 import { FormBuilder } from './components/FormBuilder.js?v=6';
 import { VaultUI } from './components/UI.js?v=7';
-import { SearchIndex } from './components/SearchIndex.js?v=2';
+import { SearchIndex } from './components/SearchIndex.js?v=5';
 
 class ProjectVaultApp {
     constructor() {
@@ -75,6 +75,45 @@ class ProjectVaultApp {
         document.body.addEventListener('input', (e) => {
             if (e.target && e.target.id === 'globalSearchInput') {
                 this.executeSearch(e.target.value);
+            }
+        });
+
+        // Search Keyboard Navigation Hook
+        document.body.addEventListener('keydown', (e) => {
+            if (e.target && e.target.id === 'globalSearchInput') {
+                const results = document.querySelectorAll('.search-result-item');
+                if (results.length === 0) return;
+
+                let currentIndex = -1;
+                results.forEach((el, idx) => {
+                    if (el.classList.contains('active-search-item')) {
+                        currentIndex = idx;
+                    }
+                });
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (currentIndex < results.length - 1) {
+                        if (currentIndex >= 0) results[currentIndex].classList.remove('active-search-item', 'bg-secondary', 'bg-opacity-25');
+                        currentIndex++;
+                        results[currentIndex].classList.add('active-search-item', 'bg-secondary', 'bg-opacity-25');
+                        results[currentIndex].scrollIntoView({ block: 'nearest' });
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (currentIndex > 0) {
+                        results[currentIndex].classList.remove('active-search-item', 'bg-secondary', 'bg-opacity-25');
+                        currentIndex--;
+                        results[currentIndex].classList.add('active-search-item', 'bg-secondary', 'bg-opacity-25');
+                        results[currentIndex].scrollIntoView({ block: 'nearest' });
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentIndex === -1) currentIndex = 0;
+                    if (results[currentIndex]) {
+                        results[currentIndex].click();
+                    }
+                }
             }
         });
 
@@ -159,6 +198,16 @@ class ProjectVaultApp {
         window.addEventListener('click', resetTimer);
         window.addEventListener('scroll', resetTimer);
 
+        // Heartbeat to keep backend session aligned with frontend activity
+        // This prevents the backend's strict idle timeout from triggering prematurely 
+        // while the user is actively typing or navigating via keyboard (which resets frontend timer but doesn't make API calls).
+        setInterval(() => {
+            if (this.isUnlocked && !this.state.mustChangePin) {
+                // Send a silent ping to bump LAST_ACTIVITY on the server
+                fetch('api.php?action=check_status').catch(() => null);
+            }
+        }, 4000); // Ping every 4 seconds (must be less than the 10s timeout)
+
         // Start timer initially
         resetTimer();
     }
@@ -177,6 +226,10 @@ class ProjectVaultApp {
     async logout() {
         // Synchronously force-hide all modals and clean up backdrops to prevent focus traps
         document.querySelectorAll('.modal').forEach(m => {
+            try {
+                const inst = bootstrap.Modal.getInstance(m);
+                if (inst) inst.dispose();
+            } catch (e) {}
             m.classList.remove('show');
             m.style.display = 'none';
             m.setAttribute('aria-hidden', 'true');
@@ -461,8 +514,8 @@ class ProjectVaultApp {
                                 <span class="fw-bold tracking-tight fs-4" style="color: var(--text-primary)">CoderVault</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" onclick="VaultEngine.toggleGlobalSearch()" title="Cari (Shift+F)">
-                                    <i class="bi bi-search"></i>
+                                <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" onclick="VaultEngine.toggleGlobalSearch()" title="Cari / Eksekusi (Shift+F)">
+                                    <i class="bi bi-magic"></i>
                                 </button>
                                 <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" id="themeToggleBtn" title="Ganti Tema">
                                     <i class="bi bi-moon-stars"></i>

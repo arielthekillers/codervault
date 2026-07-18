@@ -11,26 +11,139 @@ export class SearchIndex {
 
         let matches = [];
 
-        // 1. Scan Project Context Footprints
-        appState.projects.forEach(p => {
-            if (p.name.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q))) {
-                matches.push({ type: 'Project', label: p.name, desc: p.description, action: () => VaultEngine.switchProject(p.id) });
+        // --- SYSTEM COMMANDS ---
+        if (q === 'logout' || q === 'lock' || q === 'exit') {
+            matches.push({
+                type: 'SYSTEM',
+                label: 'Kunci Vault Sekarang (Logout)',
+                desc: 'Tutup semua data dan tampilkan layar kunci PIN',
+                action: () => {
+                    bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                    VaultEngine.logout();
+                }
+            });
+            return matches;
+        }
+        
+        // --- ADD LAUNCHER MODE ---
+        if (q.startsWith('add ') || q === 'add') {
+            const addQuery = q.replace(/^add\s*/i, '').trim();
+            const parts = addQuery.split(/\s+/).filter(w => w);
+            const typeQ = parts.length > 0 ? parts[0] : '';
+            const projQ = parts.slice(1).join('').toLowerCase();
+            const projKeywords = parts.slice(1);
+            
+            let matchedTypes = [];
+            // Match types
+            if (appState.itemTypes) {
+                Object.keys(appState.itemTypes).forEach(key => {
+                    const label = appState.itemTypes[key].label.toLowerCase();
+                    if (!typeQ || key.includes(typeQ) || label.includes(typeQ) || label.replace(/\s+/g, '').includes(typeQ)) {
+                        matchedTypes.push({ key, label: appState.itemTypes[key].label });
+                    }
+                });
+            } else {
+                const defaults = [{key:'login',label:'Login Credential'},{key:'note',label:'Secure Note'},{key:'database',label:'Database'},{key:'server',label:'Server'}];
+                matchedTypes = defaults.filter(t => !typeQ || t.key.includes(typeQ) || t.label.toLowerCase().includes(typeQ));
             }
-        });
+
+            let matchedProjects = [];
+            if (appState.projects) {
+                appState.projects.forEach(p => {
+                    const pNameNoSpace = p.name.replace(/\s+/g, '').toLowerCase();
+                    const pNameFull = p.name.toLowerCase();
+                    const pDescNoSpace = (p.description || '').replace(/\s+/g, '').toLowerCase();
+                    
+                    const matchNoSpace = !projQ || pNameNoSpace.includes(projQ) || pDescNoSpace.includes(projQ);
+                    const matchKeywords = !projQ || projKeywords.every(kw => pNameFull.includes(kw));
+                    
+                    if (matchNoSpace || matchKeywords) {
+                        matchedProjects.push(p);
+                    }
+                });
+            }
+
+            // Cap the results so it's manageable if there are too many combos
+            let combos = 0;
+            matchedTypes.forEach(t => {
+                matchedProjects.forEach(p => {
+                    if (combos > 20) return;
+                    combos++;
+                    matches.push({
+                        type: 'ADD',
+                        label: `<span style="color: var(--text-primary); font-weight: 600;">${t.label.toUpperCase()}</span>`,
+                        desc: `di dalam workspace <strong>${p.name}</strong>`,
+                        action: async () => {
+                            bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                            if (!appState.activeProject || appState.activeProject.id !== p.id) {
+                                await VaultEngine.switchProject(p.id);
+                            }
+                            VaultEngine.openItemModal(t.key);
+                        }
+                    });
+                });
+            });
+            
+            return matches;
+        }
+        // --- END LAUNCHER MODE ---
+
+        let typePrefix = null;
+        let searchQuery = q;
+        
+        // Parse type prefix, e.g. "login: sintesa corp"
+        const prefixMatch = q.match(/^([a-z0-9_-]+)\s*:\s*(.*)$/i);
+        if (prefixMatch) {
+            typePrefix = prefixMatch[1].toLowerCase().trim();
+            searchQuery = prefixMatch[2].trim();
+        }
+
+        const keywords = searchQuery.split(/\s+/).filter(w => w);
+        const searchQueryNoSpace = searchQuery.replace(/\s+/g, '');
+
+        const isMatch = (textObj) => {
+            if (!searchQueryNoSpace) return true; // If only prefix was typed
+            
+            const fullText = Object.values(textObj).filter(v => v).join(' ').toLowerCase();
+            const fullTextNoSpace = fullText.replace(/\s+/g, '');
+            
+            // Match if target contains the query without spaces, OR contains all individual keywords
+            const matchNoSpace = fullTextNoSpace.includes(searchQueryNoSpace);
+            const matchKeywords = keywords.every(kw => fullText.includes(kw));
+            
+            return matchNoSpace || matchKeywords;
+        };
+
+        // 1. Scan Project Context Footprints
+        if (!typePrefix || typePrefix === 'project') {
+            appState.projects.forEach(p => {
+                if (isMatch({ n: p.name, d: p.description, t: p.tags })) {
+                    matches.push({ type: 'Project', label: p.name, desc: p.description, action: () => VaultEngine.switchProject(p.id) });
+                }
+            });
+        }
 
         // 2. Scan Items within the currently active workspace bundle
         appState.items.forEach(item => {
-            let fieldMatch = false;
-            if (item.fields) {
-                fieldMatch = Object.values(item.fields).some(val => String(val).toLowerCase().includes(q));
+            const itemTypeName = appState.itemTypes && appState.itemTypes[item.type] ? appState.itemTypes[item.type].label.toLowerCase() : item.type.toLowerCase();
+            
+            // If prefix specified, must match item type code OR item type label
+            if (typePrefix && !item.type.toLowerCase().includes(typePrefix) && !itemTypeName.includes(typePrefix)) {
+                return;
             }
 
-            if (
-                item.title.toLowerCase().includes(q) ||
-                (item.description && item.description.toLowerCase().includes(q)) ||
-                (item.tags && item.tags.toLowerCase().includes(q)) ||
-                fieldMatch
-            ) {
+            let textObj = {
+                t: item.title,
+                d: item.description,
+                tags: item.tags
+            };
+            if (item.fields) {
+                Object.keys(item.fields).forEach(k => {
+                    textObj['f_' + k] = item.fields[k];
+                });
+            }
+
+            if (isMatch(textObj)) {
                 matches.push({
                     type: item.type.toUpperCase(),
                     label: item.title,
@@ -53,10 +166,10 @@ export class SearchIndex {
         }
 
         resultsContainer.innerHTML = matches.map((m, index) => `
-            <div class="p-3 border-bottom border-secondary search-result-item d-flex justify-content-between align-items-center cursor-pointer ${index === 0 ? 'bg-dark text-white' : ''}" data-index="${index}">
+            <div class="p-2 px-3 border-bottom border-secondary search-result-item d-flex justify-content-between align-items-center cursor-pointer ${index === 0 ? 'active-search-item bg-secondary bg-opacity-25' : ''}" data-index="${index}">
                 <div>
-                    <span class="badge bg-dark border border-secondary text-primary me-2 text-uppercase" style="font-size:10px;">${m.type}</span>
-                    <strong class="text-white small d-block d-md-inline-block">${m.label}</strong>
+                    <span class="badge me-2 text-uppercase" style="background-color: var(--bg-dark-edge); border: 1px solid var(--border-color); color: var(--text-muted); font-size:10px;">${m.type}</span>
+                    <strong class="small d-block d-md-inline-block" style="color: var(--text-primary);">${m.label}</strong>
                     <div class="text-muted small mt-1 text-truncate" style="max-width: 500px;">${m.desc}</div>
                 </div>
                 <i class="bi bi-arrow-return-left text-muted small opacity-50"></i>
