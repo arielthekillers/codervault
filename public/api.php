@@ -40,10 +40,16 @@ if (isset($_SESSION['MASTER_PIN'])) {
 switch ($action) {
     case 'check_status':
         $is_setup = file_exists(__DIR__ . '/../config/config.json');
+        $idleTimeout = 900;
+        if ($is_setup) {
+            $config = StorageService::readJson(__DIR__ . '/../config/config.json', false);
+            $idleTimeout = $config['idle_timeout'] ?? 900;
+        }
         echo json_encode([
             'success' => true, 
             'locked' => !isset($_SESSION['MASTER_PIN']), 
-            'setup_required' => !$is_setup
+            'setup_required' => !$is_setup,
+            'idle_timeout' => $idleTimeout
         ]);
         break;
 
@@ -81,7 +87,7 @@ switch ($action) {
         }
 
         $_SESSION['MASTER_PIN'] = $pin;
-        echo json_encode(['success' => true, 'message' => 'Vault unlocked successfully.', 'must_change_pin' => $_SESSION['config']['must_change_pin'] ?? false]);
+        echo json_encode(['success' => true, 'message' => 'Vault unlocked successfully.', 'must_change_pin' => $_SESSION['config']['must_change_pin'] ?? false, 'idle_timeout' => $_SESSION['config']['idle_timeout'] ?? 900]);
         break;
 
     case 'get_projects':
@@ -481,8 +487,14 @@ switch ($action) {
 
         if ($rawArray['type'] === 'item') {
             $itemData = $rawArray['data'];
-            $projectId = $itemData['project_id'];
-            $projectDir = __DIR__ . '/../storage/projects/' . $projectId;
+            $projectId = $_POST['project_id'] ?? '';
+            
+            if (empty($projectId)) {
+                echo json_encode(['success' => false, 'message' => 'Silakan masuk ke dalam Workspace terlebih dahulu sebelum mengimpor Item.']);
+                exit;
+            }
+
+            $projectDir = __DIR__ . '/../storage/projects/' . preg_replace('/[^a-zA-Z0-9\-_]/', '', $projectId);
             
             // Auto create workspace if missing? Let's just create a dummy one or require it.
             // Better to recreate the workspace minimally if it doesn't exist

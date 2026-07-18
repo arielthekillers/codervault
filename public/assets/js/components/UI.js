@@ -46,7 +46,10 @@ export class VaultUI {
                             <i class="bi bi-folder-x text-muted display-4 mb-3 d-block"></i>
                             <h5 style="color: var(--text-primary)">Belum Ada Workspace</h5>
                             <p class="text-muted small mb-4">Mulai dengan membuat ruang kerja baru untuk menyimpan kredensial Anda dengan aman.</p>
-                            <button class="btn btn-outline-primary" onclick="VaultEngine.openProjectModal()">Buat Workspace Pertama</button>
+                            <div class="d-flex justify-content-center gap-2">
+                                <button class="btn btn-outline-primary" onclick="VaultEngine.openProjectModal()">Buat Workspace Pertama</button>
+                                <button class="btn btn-outline-info" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('importShareModal')).show()">Import Data</button>
+                            </div>
                         </div>
                     </div>
                 ` : ''}
@@ -131,7 +134,10 @@ export class VaultUI {
                             <i class="bi bi-box-seam text-muted display-4 mb-3 d-block"></i>
                             <h5 style="color: var(--text-primary)">Workspace Kosong</h5>
                             <p class="text-muted small mb-4">Belum ada item yang tersimpan di workspace ini. Mulai tambahkan kredensial, catatan, atau file penting Anda dengan aman.</p>
-                            <button class="btn btn-outline-primary" onclick="VaultEngine.openTypeSelectionModal()">Tambah Item Pertama</button>
+                            <div class="d-flex justify-content-center gap-2">
+                                <button class="btn btn-outline-primary" onclick="VaultEngine.openTypeSelectionModal()">Tambah Item Pertama</button>
+                                <button class="btn btn-outline-info" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('importShareModal')).show()">Import Data</button>
+                            </div>
                         </div>
                     </div>`;
                 } else {

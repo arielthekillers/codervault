@@ -369,8 +369,8 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- 4. Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <!-- Generic Confirmation Modal -->
+    <div class="modal fade" id="genericConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
                 <div class="modal-body p-4 text-center">
@@ -379,11 +379,11 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
                             <i class="bi bi-exclamation-triangle fs-3" style="color: var(--accent-danger)"></i>
                         </div>
                     </div>
-                    <h5 class="fw-bold mb-2" style="color: var(--text-primary)">Hapus Item?</h5>
-                    <p class="text-muted small mb-4">Item yang dihapus tidak dapat dikembalikan lagi. Yakin ingin melanjutkan?</p>
+                    <h5 class="fw-bold mb-2" id="genericConfirmTitle" style="color: var(--text-primary)">Konfirmasi</h5>
+                    <p class="text-muted small mb-4" id="genericConfirmDesc">Apakah Anda yakin ingin melanjutkan?</p>
                     <div class="d-flex justify-content-center gap-2">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="button" class="btn btn-danger" onclick="VaultEngine.confirmDeleteItem()">Hapus</button>
+                        <button type="button" class="btn btn-danger" id="genericConfirmActionBtn">Ya</button>
                     </div>
                 </div>
             </div>

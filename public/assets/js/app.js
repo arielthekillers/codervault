@@ -274,37 +274,41 @@ class ProjectVaultApp {
                 const fileInput = document.getElementById('backupZipInput');
                 if (!fileInput.files.length) return;
 
-                if (!confirm('PERINGATAN KERAS! Anda yakin ingin menghapus semua data Anda saat ini dan menggantinya dengan backup ini?')) {
-                    return;
-                }
+                this.confirmAction(
+                    'Restore Sistem?',
+                    'PERINGATAN KERAS! Anda yakin ingin menghapus semua data saat ini dan menggantinya dengan backup ini?',
+                    'Restore Sekarang',
+                    async () => {
+                        const btn = document.getElementById('restoreBackupBtn');
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mereset...';
 
-                const btn = document.getElementById('restoreBackupBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mereset...';
+                        const formData = new FormData();
+                        formData.append('backup_zip', fileInput.files[0]);
 
-                const formData = new FormData();
-                formData.append('backup_zip', fileInput.files[0]);
+                        try {
+                            const response = await fetch('api.php?action=restore_backup', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const res = await response.json();
+                            
+                            if (res.success) {
+                                this.showToast('Sistem berhasil di-restore! Memuat ulang...', 'success');
+                                setTimeout(() => window.location.reload(), 1500);
+                            } else {
+                                this.showToast(res.message || 'Gagal restore backup.', 'danger');
+                            }
+                        } catch (err) {
+                            this.showToast('Terjadi kesalahan jaringan.', 'danger');
+                        }
 
-                try {
-                    const response = await fetch('api.php?action=restore_backup', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const res = await response.json();
-                    
-                    if (res.success) {
-                        this.showToast('Sistem berhasil di-restore! Memuat ulang...', 'success');
-                        setTimeout(() => window.location.reload(), 1500);
-                    } else {
-                        this.showToast(res.message || 'Gagal restore backup.', 'danger');
+                        btn.disabled = false;
+                        btn.innerHTML = 'Restore Sekarang';
                     }
-                } catch (err) {
-                    this.showToast('Terjadi kesalahan jaringan.', 'danger');
-                }
-
-                btn.disabled = false;
-                btn.innerHTML = 'Restore Sekarang';
+                );
             });
+
         }
         
         const importShareForm = document.getElementById('importShareForm');
@@ -322,6 +326,9 @@ class ProjectVaultApp {
                 const formData = new FormData();
                 formData.append('sharing_code', codeInput);
                 formData.append('share_file', fileInput.files[0]);
+                if (this.state.activeProject) {
+                    formData.append('project_id', this.state.activeProject.id);
+                }
 
                 try {
                     const response = await fetch('api.php?action=import_share', {
@@ -334,7 +341,11 @@ class ProjectVaultApp {
                         this.showToast(res.message, 'success');
                         bootstrap.Modal.getInstance(document.getElementById('importShareModal'))?.hide();
                         importShareForm.reset();
-                        this.fetchProjects(); // Reload data
+                        if (this.state.activeProject) {
+                            this.switchProject(this.state.activeProject.id);
+                        } else {
+                            this.fetchProjects(); // Reload data
+                        }
                     } else {
                         this.showToast(res.message || 'Gagal mengimpor data.', 'danger');
                     }
@@ -389,6 +400,10 @@ class ProjectVaultApp {
     async checkAuthStatus() {
         const data = await this.makeRequest('api.php?action=check_status');
         if (!data) return;
+        
+        if (data.idle_timeout) {
+            this.state.idleTimeout = data.idle_timeout;
+        }
 
         if (data.locked) {
             this.renderLockScreen(data.setup_required);
@@ -477,6 +492,10 @@ class ProjectVaultApp {
             });
             
             if (res && res.success) {
+                if (res.idle_timeout) {
+                    this.state.idleTimeout = res.idle_timeout;
+                }
+                
                 if (res.must_change_pin) {
                     this.state.mustChangePin = true;
                 }
@@ -698,6 +717,12 @@ class ProjectVaultApp {
                                 <span class="fw-bold tracking-tight fs-4" style="color: var(--text-primary)">CoderVault</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('importShareModal')).show()" title="Import Data (.cvshare)">
+                                    <i class="bi bi-box-arrow-in-down"></i>
+                                </button>
+                                <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" onclick="VaultEngine.openSettings()" title="Pengaturan Sistem">
+                                    <i class="bi bi-gear"></i>
+                                </button>
                                 <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" onclick="VaultEngine.toggleGlobalSearch()" title="Cari / Eksekusi (Shift+F)">
                                     <i class="bi bi-magic"></i>
                                 </button>
@@ -877,8 +902,12 @@ class ProjectVaultApp {
         const itemId = document.getElementById('itemFormId').value;
         if (!itemId) return;
         
-        const deleteModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal'));
-        deleteModal.show();
+        this.confirmAction(
+            'Hapus Item?',
+            'Item yang dihapus tidak dapat dikembalikan lagi. Yakin ingin melanjutkan?',
+            'Hapus',
+            () => this.confirmDeleteItem()
+        );
     }
 
     async exportShare(itemId = null) {
@@ -897,7 +926,7 @@ class ProjectVaultApp {
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            a.download = (itemId ? `item_${itemId}` : `workspace_${projectId}`) + '.cvshare';
+            a.download = (itemId ? itemId : projectId) + '.cvshare';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -913,34 +942,52 @@ class ProjectVaultApp {
     async deleteProject() {
         if (!this.state.activeProject) return;
         const projectId = this.state.activeProject.id;
+          this.confirmAction(
+            'Hapus Workspace?',
+            `Apakah Anda yakin ingin menghapus Workspace "${this.state.activeProject.name}" secara permanen beserta semua item di dalamnya?`,
+            'Hapus Permanen',
+            async () => {
+                const btn = document.getElementById('projectFormDeleteBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghapus...';
+
+                const res = await this.makeRequest('api.php?action=delete_project', {
+                    method: 'POST',
+                    body: { project_id: this.state.activeProject.id }
+                });
+
+                if (res && res.success) {
+                    this.showToast('Workspace berhasil dihapus!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('projectModal'))?.hide();
+                    bootstrap.Modal.getInstance(document.getElementById('genericConfirmModal'))?.hide();
+                    this.closeProject();
+                    this.fetchProjects(); // Refresh the list
+                } else {
+                    this.showToast(res ? res.message : 'Gagal menghapus Workspace.', 'danger');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-trash"></i> Remove';
+                    }
+                }
+            }
+        );       }
+
+    confirmAction(title, desc, confirmBtnText, callback) {
+        document.getElementById('genericConfirmTitle').innerText = title;
+        document.getElementById('genericConfirmDesc').innerText = desc;
         
-        if (!confirm(`Apakah Anda yakin ingin menghapus Workspace "${this.state.activeProject.name}" secara permanen beserta semua item di dalamnya?`)) {
-            return;
-        }
+        const actionBtn = document.getElementById('genericConfirmActionBtn');
+        actionBtn.innerText = confirmBtnText;
         
-        const btn = document.getElementById('projectFormDeleteBtn');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghapus...';
-        }
+        // Remove existing listeners by cloning
+        const newActionBtn = actionBtn.cloneNode(true);
+        actionBtn.parentNode.replaceChild(newActionBtn, actionBtn);
         
-        const res = await this.makeRequest('api.php?action=delete_project', {
-            method: 'POST',
-            body: { project_id: projectId }
+        newActionBtn.addEventListener('click', () => {
+            callback();
         });
         
-        if (res && res.success) {
-            this.showToast('Workspace berhasil dihapus!', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('projectModal'))?.hide();
-            this.closeProject();
-            this.fetchProjects(); // Refresh the list
-        } else {
-            this.showToast(res ? res.message : 'Gagal menghapus Workspace.', 'danger');
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-trash"></i> Remove';
-            }
-        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('genericConfirmModal')).show();
     }
 
     async confirmDeleteItem() {
@@ -956,7 +1003,7 @@ class ProjectVaultApp {
 
         if (res && res.success) {
             this.state.items = this.state.items.filter(i => i.id !== itemId);
-            bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'))?.hide();
+            bootstrap.Modal.getInstance(document.getElementById('genericConfirmModal'))?.hide();
             bootstrap.Modal.getInstance(document.getElementById('itemEngineModal'))?.hide();
             VaultUI.renderDashboard(this);
         } else {
