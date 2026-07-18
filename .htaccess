@@ -1,0 +1,14 @@
+# /codervault/.htaccess
+RewriteEngine On
+RewriteBase /codervault/
+
+# If the asset or script exists directly inside public, serve it
+RewriteCond %{DOCUMENT_ROOT}/codervault/public/$1 -f [OR]
+RewriteCond %{DOCUMENT_ROOT}/codervault/public/$1 -d
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Silently catch root-level API requests and route them to the public folder
+RewriteRule ^api.php$ public/api.php [QSA,L]
+
+# Route the main page entry point
+RewriteRule ^$ public/index.php [L]

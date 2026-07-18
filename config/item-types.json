@@ -1,0 +1,60 @@
+{
+    "account": {
+        "label": "Login Credentials",
+        "icon": "bi-person-badge",
+        "color": "#ef4444",
+        "fields": [
+            { "name": "url", "label": "Login URL", "type": "url", "required": false },
+            { "name": "username", "label": "Username / Email", "type": "text", "required": true },
+            { "name": "password", "label": "Password", "type": "password", "required": true, "revealable": true }
+        ]
+    },
+    "note": {
+        "label": "Catatan",
+        "icon": "bi-file-earmark-text",
+        "color": "#10b981",
+        "fields": [
+            { "name": "content", "label": "Isi Catatan", "type": "textarea", "required": true }
+        ]
+    },
+    "api": {
+        "label": "API Key",
+        "icon": "bi-terminal",
+        "color": "#f59e0b",
+        "fields": [
+            { "name": "endpoint", "label": "API Endpoint", "type": "url", "required": false },
+            { "name": "key", "label": "API Key", "type": "password", "required": true, "revealable": true }
+        ]
+    },
+    "database": {
+        "label": "Database Connection",
+        "icon": "bi-database",
+        "color": "#3b82f6",
+        "fields": [
+            { "name": "host", "label": "Host", "type": "text", "required": true },
+            { "name": "db", "label": "Database Name", "type": "text", "required": true },
+            { "name": "username", "label": "Username", "type": "text", "required": true },
+            { "name": "password", "label": "Password", "type": "password", "required": true, "revealable": true }
+        ]
+    },
+    "list": {
+        "label": "Todo List",
+        "icon": "bi-list-check",
+        "color": "#8b5cf6",
+        "fields": [
+            { "name": "tasks", "label": "List Items", "type": "list" }
+        ]
+    },
+    "ssh": {
+        "label": "SSH Access",
+        "icon": "bi-hdd-network",
+        "color": "#0ea5e9",
+        "fields": [
+            { "name": "host", "label": "Host / IP", "type": "text", "required": true, "width": "col-8" },
+            { "name": "port", "label": "Port (Optional)", "type": "text", "required": false, "width": "col-4" },
+            { "name": "username", "label": "Username", "type": "text", "required": true },
+            { "name": "password", "label": "Password / Passphrase", "type": "password", "required": false, "revealable": true },
+            { "name": "private_key", "label": "Private Key (Optional)", "type": "text", "required": false }
+        ]
+    }
+}
