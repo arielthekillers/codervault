@@ -2,7 +2,7 @@
 namespace Vault\Services;
 
 class CryptoService {
-    private static ?string $derivedKey = null;
+    private static $derivedKey = null;
 
     /**
      * Derives a highly secure key from the Master PIN using PBKDF2
