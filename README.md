@@ -17,9 +17,9 @@ Semua data Anda tersimpan **secara lokal (offline) dan terenkripsi menggunakan a
 - **📦 Ekspor & Impor Instan** — Bagikan *Workspace* secara aman melalui *file* berekstensi `.cvshare` terenkripsi dengan kode PIN sekali pakai, sehingga memudahkan kolaborasi antar tim.
 
 ## 🚀 Cara Menjalankan
-1. Pastikan Anda memiliki server lokal (seperti **XAMPP / Laragon**) yang mendukung PHP 8+.
+1. Pastikan Anda memiliki server lokal (seperti **XAMPP / Laragon**) yang mendukung **PHP 7.4+**.
 2. Kloning atau letakkan *folder* CoderVault di dalam direktori `htdocs` (atau `www`) Anda.
-3. Akses `http://localhost/codervault/public/` melalui *browser* Anda.
+3. Akses `http://localhost/codervault/` (sesuaikan dengan nama folder Anda) melalui *browser* Anda.
 4. Buat **Master PIN** (minimum 6 angka) pada saat pertama kali dijalankan.
 5. Selesai! Ruang kerja pribadi Anda kini sudah terlindungi sepenuhnya.
 
