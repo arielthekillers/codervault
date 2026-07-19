@@ -1,39 +1,27 @@
-# CoderVault
+# 🛡️ CoderVault
 
-CoderVault is a secure, local-first credentials and secrets manager designed specifically for developers and teams. 
-It helps you securely store API keys, SSH configs, database passwords, environment variables, and snippets in organized Workspaces.
+**CoderVault** adalah asisten keamanan dan manajemen kredensial pribadi berbasis *web* yang dirancang khusus untuk _developer_ dan _power user_. Dengan antarmuka yang sangat bersih, minimalis, dan modern, CoderVault membantu Anda mengelola berbagai data rahasia tanpa mengorbankan kecepatan maupun estetika.
 
-## Key Features
+Semua data Anda tersimpan **secara lokal (offline) dan terenkripsi menggunakan algoritma AES-256-GCM tingkat militer**. Tidak ada satupun data yang mengalir ke server pihak ketiga!
 
-- **End-to-End Encryption**: Everything is encrypted with AES-256 before being stored on the disk.
-- **Local First (PHP & JSON)**: No complex databases needed. Data is stored locally in `.json` files for high portability and easy backups.
-- **Master PIN & Auto-Lock**: Access is gated behind a 6-digit Master PIN. Idle auto-lock ensures your vault is safe even if you leave your desk.
-- **Modern Minimalist UI**: Beautiful, dark-themed UI built with Bootstrap 5, complete with dynamic layouts, intuitive search, and instant toast notifications.
-- **Export & Import (Sharing)**: Easily export items or entire workspaces as encrypted `.cvshare` files and share them securely using a 6-character PIN code.
-- **Smart Engine**: Customizable schemas for Credentials, APIs, SSH setups, Env configs, Notes, FTP, Database, Cloud platforms, and Git.
+## ✨ Fitur Unggulan
 
-## Requirements
+- **🔒 Enkripsi Mutlak (AES-256)** — Semua item kredensial dan konfigurasi diamankan di tingkat server (PHP backend) menggunakan Master PIN Anda. Data JSON Anda tidak dapat dibaca oleh siapa pun tanpa PIN yang benar.
+- **🎨 UI/UX Premium & Dinamis** — Antarmuka responsif yang terinspirasi dari standar desain modern (Linear & Vercel) dengan efek *glassmorphism*, ikon yang interaktif, dan animasi *micro-interactions* yang mulus.
+- **🌗 Mode Terang & Gelap (Theme Switcher)** — Ganti tema sesuka Anda hanya dengan satu klik tombol di *Navbar*.
+- **🎲 Generator Kata Sandi** — Buat *password* aman 16-karakter (huruf, angka, simbol) secara instan saat menambah kredensial baru.
+- **🗂️ Manajemen Workspace Intuitif** — Kelola proyek dan kredensial Anda ke dalam berbagai *Workspace* berwarna. Pindahkan item antar *Workspace* dengan mudah lewat fitur **Drag & Drop**!
+- **🪄 Magic Launcher (Shift+F)** — Eksekusi perintah (seperti `lock`, `settings`, `lightmode`) atau cari kredensial Anda secepat kilat layaknya *Spotlight* / *Raycast*.
+- **📅 Pengingat (Reminders) & Bookmarks Pintar** — Sematkan tautan penting atau atur pengingat kedaluwarsa domain/SSL. Reminders disajikan dalam desain *list-view* ala kalender yang sangat bersih di dasbor utama.
+- **⏱️ Auto-Lock (Penguncian Otomatis)** — Workspace akan otomatis terkunci jika tidak ada aktivitas dalam waktu yang Anda tentukan (kustomisasi batas waktu dari Pengaturan).
+- **📦 Ekspor & Impor Instan** — Bagikan *Workspace* secara aman melalui *file* berekstensi `.cvshare` terenkripsi dengan kode PIN sekali pakai, sehingga memudahkan kolaborasi antar tim.
 
-- A web server running PHP 7.4 or newer (e.g., XAMPP, Laragon, or Nginx+PHP-FPM).
-- No relational database required! Everything runs on local flat-files.
-
-## Installation
-
-1. Clone this repository to your local server directory (e.g., `htdocs/codervault` for XAMPP).
-2. Ensure the `storage/` and `config/` directories have **Write Permissions** (`chmod -R 775` or similar depending on OS/Server).
-3. Open your browser and navigate to `http://localhost/codervault/public`.
-4. Follow the setup wizard to create your first Master PIN and unlock the vault!
-
-## Security Notes
-
-- Do not expose your `config/` or `storage/` directory to the public internet without proper server configuration. If hosting on a live server, ensure that requests to `/storage` and `/config` are blocked via `.htaccess` or Nginx configs.
-- The `.gitignore` is already configured to prevent your private `.json` credentials from being pushed to a public repository.
-
-## Usage
-
-- Start by creating a **Workspace**.
-- Use the **Magic Launcher (Cmd/Ctrl + K)** to quickly search, create, or navigate.
-- Click the **Gear Icon** to access settings such as Auto-lock timeouts and modifying the Master PIN.
+## 🚀 Cara Menjalankan
+1. Pastikan Anda memiliki server lokal (seperti **XAMPP / Laragon**) yang mendukung PHP 8+.
+2. Kloning atau letakkan *folder* CoderVault di dalam direktori `htdocs` (atau `www`) Anda.
+3. Akses `http://localhost/codervault/public/` melalui *browser* Anda.
+4. Buat **Master PIN** (minimum 6 angka) pada saat pertama kali dijalankan.
+5. Selesai! Ruang kerja pribadi Anda kini sudah terlindungi sepenuhnya.
 
 ---
-*Built with ❤️ for developers who value speed, beauty, and security.*
+*Dibangun dengan ❤️ menggunakan PHP 8, Vanilla JavaScript, dan Bootstrap 5.*
