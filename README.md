@@ -2,7 +2,7 @@
 
 **CoderVault** adalah asisten keamanan dan manajemen kredensial pribadi berbasis *web* yang dirancang khusus untuk _developer_ dan _power user_. Dengan antarmuka yang sangat bersih, minimalis, dan modern, CoderVault membantu Anda mengelola berbagai data rahasia tanpa mengorbankan kecepatan maupun estetika.
 
-Semua data Anda tersimpan **secara lokal (offline) dan terenkripsi menggunakan algoritma AES-256-GCM tingkat militer**. Tidak ada satupun data yang mengalir ke server pihak ketiga!
+Semua data Anda tersimpan **secara lokal (offline) dan terenkripsi menggunakan AES-256-GCM, algoritma enkripsi modern yang digunakan secara luas untuk melindungi data**. Tidak ada satupun data yang mengalir ke server pihak ketiga!
 
 ## ✨ Fitur Unggulan
 
