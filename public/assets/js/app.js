@@ -1073,6 +1073,7 @@ class ProjectVaultApp {
             this.state.items = this.state.items.filter(i => i.id !== itemId);
             bootstrap.Modal.getInstance(document.getElementById('genericConfirmModal'))?.hide();
             bootstrap.Modal.getInstance(document.getElementById('itemEngineModal'))?.hide();
+            await this.fetchProjects();
             VaultUI.renderDashboard(this);
         } else {
             alert('Gagal menghapus item: ' + (res.message || 'Kesalahan tidak diketahui.'));
