@@ -1,12 +1,6 @@
 RewriteEngine On
-
-# Silently catch root-level API requests and route them to the public folder
 RewriteRule ^api\.php$ public/api.php [QSA,L]
-
-# Route the main page entry point
 RewriteRule ^$ public/index.php [L]
-
-# For all other requests, route them to the public folder if they aren't real files/directories in the root
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ public/$1 [L]
