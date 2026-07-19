@@ -445,6 +445,17 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
     </div>
 
 
+    <!-- Dropzone Sidebar for Move Item -->
+    <div id="dropzoneSidebar" class="position-fixed top-0 end-0 h-100 shadow-lg" style="width: 320px; background-color: var(--bg-card); border-left: 1px solid var(--border-color); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1040; overflow-y: auto;">
+        <div class="p-4 border-bottom" style="border-bottom-color: var(--border-color) !important;">
+            <h5 class="mb-0 fw-semibold" style="color: var(--text-primary)"><i class="bi bi-box-arrow-in-right me-2"></i>Pindahkan Item</h5>
+            <p class="text-muted small mb-0 mt-1">Jatuhkan item ke salah satu workspace di bawah</p>
+        </div>
+        <div class="p-3 d-flex flex-column gap-2" id="dropzoneWorkspaceList">
+            <!-- Populated via JS on drag start -->
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script type="module" src="assets/js/app.js?v=23"></script>
@@ -469,6 +480,25 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
                     icon.classList.replace('bi-eye-slash', 'bi-eye');
                 }
             },
+            generatePassword(btn) {
+                const input = btn.closest('.input-group').querySelector('input');
+                const length = 16;
+                const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
+                let pass = "";
+                for (let i = 0, n = chars.length; i < length; ++i) {
+                    pass += chars.charAt(Math.floor(Math.random() * n));
+                }
+                input.value = pass;
+                
+                // Show a checkmark to indicate it was generated
+                const icon = btn.querySelector('i');
+                icon.classList.replace('bi-dice-5', 'bi-check-lg');
+                icon.classList.add('text-success');
+                setTimeout(() => {
+                    icon.classList.replace('bi-check-lg', 'bi-dice-5');
+                    icon.classList.remove('text-success');
+                }, 1000);
+            },
             copyToClipboard(btn) {
                 let input = btn.closest('.input-group') ? btn.closest('.input-group').querySelector('input, textarea') : btn.previousElementSibling;
                 if (!input) return;
@@ -492,6 +522,57 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
                 if (url) {
                     window.open(url, '_blank');
                 }
+            },
+            onDragStart(event, itemId, oldProjectId) {
+                event.dataTransfer.setData('itemId', itemId);
+                event.dataTransfer.setData('oldProjectId', oldProjectId);
+                event.dataTransfer.effectAllowed = 'move';
+                
+                // Show dropzone sidebar
+                const sidebar = document.getElementById('dropzoneSidebar');
+                if (sidebar) sidebar.style.transform = 'translateX(0)';
+                
+                // Populate dropzone with other workspaces
+                const list = document.getElementById('dropzoneWorkspaceList');
+                if (list && window.VaultEngine && window.VaultEngine.state.projects) {
+                    const projects = window.VaultEngine.state.projects.filter(p => p.id !== oldProjectId);
+                    if (projects.length === 0) {
+                        list.innerHTML = '<div class="text-muted small text-center p-3">Tidak ada workspace lain.</div>';
+                    } else {
+                        list.innerHTML = projects.map(p => `
+                            <div class="p-3 rounded cursor-pointer dropzone-target" style="border: 2px dashed transparent; background-color: ${p.color}15; transition: all 0.2s;" ondragover="VaultUI.onDragOver(event, this)" ondragleave="this.style.borderColor='transparent'; this.style.backgroundColor='${p.color}15';" ondrop="VaultUI.onDropItem(event, '${p.id}', this)">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi ${p.icon || 'bi-folder'} me-2 fs-5" style="color: ${p.color}"></i>
+                                    <span class="fw-semibold text-truncate" style="color: var(--text-primary); font-size: 0.9rem;">${p.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            },
+            onDragEnd(event) {
+                const sidebar = document.getElementById('dropzoneSidebar');
+                if (sidebar) sidebar.style.transform = 'translateX(100%)';
+            },
+            onDragOver(event, el) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                el.style.borderColor = 'var(--text-primary)';
+                el.style.backgroundColor = 'var(--bg-dark-edge)';
+            },
+            onDropItem(event, newProjectId, el) {
+                event.preventDefault();
+                el.style.borderColor = 'transparent';
+                
+                const itemId = event.dataTransfer.getData('itemId');
+                const oldProjectId = event.dataTransfer.getData('oldProjectId');
+                
+                if (itemId && oldProjectId && window.VaultEngine) {
+                    window.VaultEngine.moveItem(itemId, oldProjectId, newProjectId);
+                }
+                
+                const sidebar = document.getElementById('dropzoneSidebar');
+                if (sidebar) sidebar.style.transform = 'translateX(100%)';
             }
         };
     </script>

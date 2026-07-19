@@ -221,7 +221,7 @@ export class VaultUI {
 
                     return `
                         <div class="col-md-4 col-lg-3">
-                            <div class="vault-card p-3 d-flex align-items-center h-100 cursor-pointer item-card-hover" onclick="VaultEngine.inspectItem('${item.id}')">
+                            <div class="vault-card p-3 d-flex align-items-center h-100 cursor-pointer item-card-hover" onclick="VaultEngine.inspectItem('${item.id}')" draggable="true" ondragstart="VaultUI.onDragStart(event, '${item.id}', '${app.state.activeProject.id}')" ondragend="VaultUI.onDragEnd(event)">
                                 <div class="rounded p-2 me-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="background-color: ${typeSchema.color || '#a1a1aa'}20; width: 42px; height: 42px;">
                                     <i class="bi ${typeSchema.icon || 'bi-box'} fs-5" style="color: ${typeSchema.color || '#a1a1aa'}"></i>
                                 </div>
@@ -308,7 +308,7 @@ export class VaultUI {
                         }
 
                         return `
-                            <tr class="cursor-pointer" onclick="VaultEngine.inspectItem('${item.id}')" style="transition: background-color 0.2s;">
+                            <tr class="cursor-pointer" onclick="VaultEngine.inspectItem('${item.id}')" style="transition: background-color 0.2s;" draggable="true" ondragstart="VaultUI.onDragStart(event, '${item.id}', '${app.state.activeProject.id}')" ondragend="VaultUI.onDragEnd(event)">
                                 <td class="py-2">
                                     <span class="text-truncate d-block" style="color: var(--text-primary); font-size: 0.85rem; max-width: 250px;">${item.title}</span>
                                 </td>

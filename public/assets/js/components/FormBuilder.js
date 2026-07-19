@@ -52,6 +52,9 @@ export class FormBuilder {
                 
                 if (isPassword) {
                     html += `
+                    <button class="btn btn-outline-secondary border-secondary" type="button" onclick="VaultUI.generatePassword(this)" title="Generate Password Acak">
+                        <i class="bi bi-dice-5"></i>
+                    </button>
                     <button class="btn btn-outline-secondary border-secondary" type="button" onclick="VaultUI.toggleReveal(this)" title="Lihat/Sembunyikan">
                         <i class="bi bi-eye"></i>
                     </button>`;

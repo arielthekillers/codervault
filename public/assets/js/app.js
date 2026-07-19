@@ -57,6 +57,29 @@ class ProjectVaultApp {
         }
     }
 
+    async toggleGlobalTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        document.documentElement.setAttribute('data-bs-theme', newTheme);
+        
+        const btnIcon = document.querySelector('#themeToggleBtn i');
+        if (btnIcon) {
+            btnIcon.className = newTheme === 'light' ? 'bi bi-sun' : 'bi bi-moon-stars';
+        }
+        
+        // Update settings modal radio if it's open
+        const radio = document.querySelector(`input[name="themeRadios"][value="${newTheme}"]`);
+        if (radio) radio.checked = true;
+        
+        await this.makeRequest('api.php?action=update_config', {
+            method: 'POST',
+            body: { theme: newTheme }
+        });
+        
+        this.showToast('Tema diperbarui', 'success');
+    }
+
     initEventListeners() {
         // Universal Shortcut Binding Matrix: Shift + F
         window.addEventListener('keydown', (e) => {
@@ -800,19 +823,7 @@ class ProjectVaultApp {
             }
 
             themeBtn?.addEventListener('click', () => {
-                const html = document.documentElement;
-                const isDark = html.getAttribute('data-bs-theme') === 'dark';
-                const newTheme = isDark ? 'light' : 'dark';
-                html.setAttribute('data-bs-theme', newTheme);
-                
-                if (newTheme === 'light') {
-                    themeIcon.classList.replace('bi-moon-stars', 'bi-sun');
-                } else {
-                    themeIcon.classList.replace('bi-sun', 'bi-moon-stars');
-                }
-
-                // Call backend to persist if supported, or just use localStorage (fallback to backend if possible)
-                this.makeRequest('api.php?action=save_theme', { method: 'POST', body: { theme: newTheme } });
+                VaultEngine.toggleGlobalTheme();
             });
 
             this.state.activeProject = null;
@@ -1065,6 +1076,26 @@ class ProjectVaultApp {
             VaultUI.renderDashboard(this);
         } else {
             alert('Gagal menghapus item: ' + (res.message || 'Kesalahan tidak diketahui.'));
+        }
+    }
+
+    async moveItem(itemId, oldProjectId, newProjectId) {
+        if (!itemId || !oldProjectId || !newProjectId || oldProjectId === newProjectId) return;
+        
+        const res = await this.makeRequest('api.php?action=move_item', {
+            method: 'POST',
+            body: { item_id: itemId, old_project_id: oldProjectId, new_project_id: newProjectId }
+        });
+
+        if (res && res.success) {
+            this.showToast('Item berhasil dipindahkan!', 'success');
+            // Refresh projects and active project
+            await this.fetchProjects();
+            if (this.state.activeProject && this.state.activeProject.id === oldProjectId) {
+                await this.switchProject(oldProjectId);
+            }
+        } else {
+            this.showToast('Gagal memindahkan item: ' + (res?.message || ''), 'danger');
         }
     }
 

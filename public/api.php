@@ -204,6 +204,36 @@ switch ($action) {
         echo json_encode(['success' => $saved, 'item' => $itemData]);
         break;
 
+    case 'move_item':
+        $oldProjectId = preg_replace('/[^a-zA-Z0-9\-_]/', '', $payload['old_project_id'] ?? '');
+        $newProjectId = preg_replace('/[^a-zA-Z0-9\-_]/', '', $payload['new_project_id'] ?? '');
+        $itemId = preg_replace('/[^a-zA-Z0-9\-_\.]/', '', $payload['item_id'] ?? '');
+        
+        if (empty($oldProjectId) || empty($newProjectId) || empty($itemId)) {
+            echo json_encode(['success' => false, 'message' => 'Missing required parameters.']);
+            exit;
+        }
+        
+        $sourceFile = __DIR__ . "/../storage/projects/{$oldProjectId}/items/{$itemId}.json";
+        $destDir = __DIR__ . "/../storage/projects/{$newProjectId}/items";
+        $destFile = $destDir . "/{$itemId}.json";
+        
+        if (!file_exists($sourceFile)) {
+            echo json_encode(['success' => false, 'message' => 'Source item not found.']);
+            exit;
+        }
+        
+        if (!is_dir($destDir)) {
+            mkdir($destDir, 0755, true);
+        }
+        
+        if (rename($sourceFile, $destFile)) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to move item.']);
+        }
+        break;
+
     case 'delete_item':
         $projectId = preg_replace('/[^a-zA-Z0-9\-_]/', '', $payload['project_id'] ?? '');
         $itemId = preg_replace('/[^a-zA-Z0-9\-_\.]/', '', $payload['item_id'] ?? '');
