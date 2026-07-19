@@ -24,4 +24,4 @@ Semua data Anda tersimpan **secara lokal (offline) dan terenkripsi menggunakan a
 5. Selesai! Ruang kerja pribadi Anda kini sudah terlindungi sepenuhnya.
 
 ---
-*Dibangun dengan ❤️ menggunakan PHP 8, Vanilla JavaScript, dan Bootstrap 5.*
+*Untuk masukan, saran, atau Private Tech Support, silakan hubungi via email: **arielthekillers@gmail.com**.*
