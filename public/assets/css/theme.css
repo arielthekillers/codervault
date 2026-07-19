@@ -385,3 +385,21 @@ kbd {
 .btn-link:hover {
     color: var(--text-primary);
 }
+
+/* Dropdown Submenu */
+.dropdown-submenu {
+    position: relative;
+}
+.dropdown-submenu > .dropdown-menu {
+    top: 0;
+    right: 100%;
+    left: auto;
+    margin-top: -1px;
+    display: none;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    z-index: 9999;
+}
+.dropdown-submenu:hover > .dropdown-menu {
+    display: block !important;
+}

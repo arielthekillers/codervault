@@ -1,6 +1,6 @@
 // public/assets/js/app.js
 import { FormBuilder } from './components/FormBuilder.js?v=6';
-import { VaultUI } from './components/UI.js?v=7';
+import { VaultUI } from './components/UI.js?v=8';
 import { SearchIndex } from './components/SearchIndex.js?v=10';
 
 class ProjectVaultApp {
@@ -9,6 +9,8 @@ class ProjectVaultApp {
             activeProject: null,
             projects: [],
             items: [],
+            layoutMode: 'modern',
+            groupByType: false
         };
         this.searchMatches = [];
         this.isUnlocked = false;
@@ -61,6 +63,18 @@ class ProjectVaultApp {
             if (e.shiftKey && e.key.toLowerCase() === 'f' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault();
                 this.toggleGlobalSearch();
+            }
+            
+            if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                this.toggleGlobalSearch();
+            }
+        });
+
+        // Block Firefox Quick Find which is triggered on keypress
+        window.addEventListener('keypress', (e) => {
+            if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
             }
         });
 
@@ -415,6 +429,10 @@ class ProjectVaultApp {
         if (data.idle_timeout) {
             this.state.idleTimeout = data.idle_timeout;
         }
+        
+        if (data.layout_mode) {
+            this.state.layoutMode = data.layout_mode;
+        }
 
         if (data.locked) {
             this.renderLockScreen(data.setup_required);
@@ -701,8 +719,14 @@ class ProjectVaultApp {
 
     async fetchProjects() {
         const res = await this.makeRequest('api.php?action=get_projects');
+        const aggRes = await this.makeRequest('api.php?action=get_dashboard_aggregates');
+        
         if (res && res.success) {
             this.state.projects = res.projects;
+            if (aggRes && aggRes.success) {
+                this.state.aggregates = { reminders: aggRes.reminders, bookmarks: aggRes.bookmarks };
+                VaultUI.renderGlobalBookmarks(this);
+            }
             if (!this.state.activeProject) {
                 VaultUI.renderProjectList(this);
             }
@@ -715,8 +739,13 @@ class ProjectVaultApp {
         this.state.itemTypes = await fetch('config/item-types.json').then(r => r.json());
 
         const res = await this.makeRequest('api.php?action=get_projects');
+        const aggRes = await this.makeRequest('api.php?action=get_dashboard_aggregates');
+        
         if (res && res.success) {
             this.state.projects = res.projects;
+            if (aggRes && aggRes.success) {
+                this.state.aggregates = { reminders: aggRes.reminders, bookmarks: aggRes.bookmarks };
+            }
 
             // Build the Shell Infrastructure Frame
             document.getElementById('appShell').innerHTML = `
@@ -728,6 +757,14 @@ class ProjectVaultApp {
                                 <span class="fw-bold tracking-tight fs-4" style="color: var(--text-primary)">CoderVault</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" data-bs-toggle="dropdown" aria-expanded="false" title="Bookmarks">
+                                        <i class="bi bi-bookmark-star"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="background-color: var(--bg-card); border: 1px solid var(--border-color);" id="globalBookmarkMenu">
+                                        <li><span class="dropdown-item-text text-muted small">Loading bookmarks...</span></li>
+                                    </ul>
+                                </div>
                                 <button class="btn btn-sm rounded-circle shadow-sm d-flex justify-content-center align-items-center vault-icon-btn" style="width: 36px; height: 36px; background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: border-color 0.15s ease;" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('importShareModal')).show()" title="Import Data (.cvshare)">
                                     <i class="bi bi-box-arrow-in-down"></i>
                                 </button>
@@ -749,6 +786,8 @@ class ProjectVaultApp {
                     </div>
                 </div>
             `;
+
+            VaultUI.renderGlobalBookmarks(this);
 
             document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
             
@@ -778,6 +817,7 @@ class ProjectVaultApp {
 
             this.state.activeProject = null;
             VaultUI.renderProjectList(this);
+            VaultUI.renderGlobalBookmarks(this);
         }
     }
 
@@ -815,6 +855,12 @@ class ProjectVaultApp {
 
     toggleGroupBy() {
         this.state.groupByType = !this.state.groupByType;
+        VaultUI.renderDashboard(this);
+    }
+
+    toggleLayoutMode() {
+        this.state.layoutMode = this.state.layoutMode === 'modern' ? 'compact' : 'modern';
+        this.makeRequest('api.php?action=update_config', { method: 'POST', body: { layout_mode: this.state.layoutMode } });
         VaultUI.renderDashboard(this);
     }
 
@@ -1057,7 +1103,11 @@ class ProjectVaultApp {
         customInputs.forEach(input => {
             const fieldName = input.getAttribute('data-field');
             if (fieldName) {
-                itemPayload.fields[fieldName] = input.value;
+                if (input.type === 'checkbox') {
+                    itemPayload.fields[fieldName] = input.checked;
+                } else {
+                    itemPayload.fields[fieldName] = input.value;
+                }
             }
         });
 
@@ -1080,6 +1130,7 @@ class ProjectVaultApp {
                 if (!isAutoSave) {
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('itemEngineModal'))?.hide();
                     this.showToast('Item berhasil disimpan!', 'success');
+                    this.fetchProjects(); // Background update aggregates and projects
                     await this.switchProject(this.state.activeProject.id);
                 } else {
                     // Update the active project list silently to include the draft without a full reload

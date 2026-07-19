@@ -6,7 +6,8 @@
         "fields": [
             { "name": "url", "label": "Login URL", "type": "url", "required": false },
             { "name": "username", "label": "Username / Email", "type": "text", "required": true },
-            { "name": "password", "label": "Password", "type": "password", "required": true, "revealable": true }
+            { "name": "password", "label": "Password", "type": "password", "required": true, "revealable": true },
+            { "name": "bookmark", "label": "Tambahkan ke Bookmark Utama", "type": "checkbox", "required": false }
         ]
     },
     "note": {
@@ -23,7 +24,8 @@
         "color": "#f59e0b",
         "fields": [
             { "name": "endpoint", "label": "API Endpoint", "type": "url", "required": false },
-            { "name": "key", "label": "API Key", "type": "password", "required": true, "revealable": true }
+            { "name": "key", "label": "API Key", "type": "password", "required": true, "revealable": true },
+            { "name": "bookmark", "label": "Tambahkan ke Bookmark Utama", "type": "checkbox", "required": false }
         ]
     },
     "database": {
@@ -55,6 +57,23 @@
             { "name": "username", "label": "Username", "type": "text", "required": true },
             { "name": "password", "label": "Password / Passphrase", "type": "password", "required": false, "revealable": true },
             { "name": "private_key", "label": "Private Key (Optional)", "type": "text", "required": false }
+        ]
+    },
+    "reminder": {
+        "label": "Reminder",
+        "icon": "bi-alarm",
+        "color": "#eab308",
+        "fields": [
+            { "name": "tanggal", "label": "Tanggal / Tenggat Waktu", "type": "date", "required": true }
+        ]
+    },
+    "reference": {
+        "label": "Reference Link",
+        "icon": "bi-link-45deg",
+        "color": "#14b8a6",
+        "fields": [
+            { "name": "url", "label": "URL Tautan", "type": "url", "required": true },
+            { "name": "bookmark", "label": "Tambahkan ke Bookmark Utama", "type": "checkbox", "required": false }
         ]
     }
 }

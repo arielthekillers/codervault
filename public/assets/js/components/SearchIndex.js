@@ -72,6 +72,18 @@ export class SearchIndex {
                         bootstrap.Modal.getOrCreateInstance(document.getElementById('importShareModal')).show();
                     }
                 }
+            },
+            {
+                aliases: ['help', 'bantuan', '?', 'shortcut', 'shortcuts'],
+                item: {
+                    type: 'SYSTEM',
+                    label: 'Help & Shortcuts',
+                    desc: 'Tampilkan panduan perintah Magic Launcher',
+                    action: () => {
+                        bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('launcherHelpModal')).show();
+                    }
+                }
             }
         ];
 
@@ -106,7 +118,10 @@ export class SearchIndex {
 
             let matchedProjects = [];
             if (appState.projects) {
-                appState.projects.forEach(p => {
+                if (!projQ && appState.activeProject) {
+                    matchedProjects.push(appState.activeProject);
+                } else {
+                    appState.projects.forEach(p => {
                     const pNameNoSpace = p.name.replace(/\s+/g, '').toLowerCase();
                     const pNameFull = p.name.toLowerCase();
                     const pDescNoSpace = (p.description || '').replace(/\s+/g, '').toLowerCase();
@@ -118,13 +133,14 @@ export class SearchIndex {
                         matchedProjects.push(p);
                     }
                 });
+                }
             }
 
             // Cap the results so it's manageable if there are too many combos
             let combos = 0;
             matchedTypes.forEach(t => {
                 matchedProjects.forEach(p => {
-                    if (combos > 20) return;
+                    if (combos > 50) return;
                     combos++;
                     matches.push({
                         type: 'ADD',
@@ -222,15 +238,40 @@ export class SearchIndex {
             return;
         }
 
-        resultsContainer.innerHTML = matches.map((m, index) => `
+        resultsContainer.innerHTML = matches.map((m, index) => {
+            let badgeBg = 'var(--bg-dark-edge)';
+            let badgeBorder = 'var(--border-color)';
+            let badgeColor = 'var(--text-muted)';
+            
+            const t = (m.type || '').toUpperCase();
+            if (t === 'ADD') {
+                badgeBg = 'rgba(16, 185, 129, 0.1)';
+                badgeBorder = 'rgba(16, 185, 129, 0.3)';
+                badgeColor = 'var(--accent-success)';
+            } else if (t === 'SYSTEM') {
+                badgeBg = 'rgba(239, 68, 68, 0.1)';
+                badgeBorder = 'rgba(239, 68, 68, 0.3)';
+                badgeColor = 'var(--accent-danger)';
+            } else if (t === 'PROJECT') {
+                badgeBg = 'rgba(59, 130, 246, 0.1)';
+                badgeBorder = 'rgba(59, 130, 246, 0.3)';
+                badgeColor = 'var(--accent)';
+            } else {
+                badgeBg = 'rgba(168, 85, 247, 0.1)';
+                badgeBorder = 'rgba(168, 85, 247, 0.3)';
+                badgeColor = '#c084fc';
+            }
+            
+            return `
             <div class="p-2 px-3 border-bottom search-result-item d-flex justify-content-between align-items-center cursor-pointer ${index === 0 ? 'active-search-item bg-secondary bg-opacity-25' : ''}" data-index="${index}" style="border-bottom-color: var(--border-color) !important;">
-                <div>
-                    <span class="badge me-2 text-uppercase" style="background-color: var(--bg-dark-edge); border: 1px solid var(--border-color); color: var(--text-muted); font-size:10px;">${m.type}</span>
-                    <span class="small fw-semibold d-block d-md-inline-block" style="color: var(--text-primary);">${m.label}</span>
-                    <div class="text-muted small mt-1 text-truncate" style="max-width: 500px;">${m.desc}</div>
+                <div class="text-truncate d-flex align-items-center flex-grow-1 me-3">
+                    <span class="badge me-2 text-uppercase" style="background-color: ${badgeBg}; border: 1px solid ${badgeBorder}; color: ${badgeColor}; font-size:10px;">${m.type}</span>
+                    <span class="small fw-semibold" style="color: var(--text-primary);">${m.label}</span>
+                    <span class="text-muted small ms-2 text-truncate" style="font-size: 0.8rem; margin-top: 1px;">${m.desc}</span>
                 </div>
                 <i class="bi bi-arrow-return-left text-muted small opacity-50"></i>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 }

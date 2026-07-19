@@ -41,15 +41,18 @@ switch ($action) {
     case 'check_status':
         $is_setup = file_exists(__DIR__ . '/../config/config.json');
         $idleTimeout = 900;
+        $layoutMode = 'modern';
         if ($is_setup) {
             $config = StorageService::readJson(__DIR__ . '/../config/config.json', false);
             $idleTimeout = $config['idle_timeout'] ?? 900;
+            $layoutMode = $config['layout_mode'] ?? 'modern';
         }
         echo json_encode([
             'success' => true, 
             'locked' => !isset($_SESSION['MASTER_PIN']), 
             'setup_required' => !$is_setup,
-            'idle_timeout' => $idleTimeout
+            'idle_timeout' => $idleTimeout,
+            'layout_mode' => $layoutMode
         ]);
         break;
 
@@ -107,6 +110,49 @@ switch ($action) {
             }
         }
         echo json_encode(['success' => true, 'projects' => $projects]);
+        break;
+
+    case 'get_dashboard_aggregates':
+        $projectDir = __DIR__ . '/../storage/projects/';
+        $reminders = [];
+        $bookmarks = [];
+        
+        if (is_dir($projectDir)) {
+            $dirs = array_filter(glob($projectDir . '*'), 'is_dir');
+            foreach ($dirs as $dir) {
+                $metaFile = $dir . '/project.json';
+                $itemsDir = $dir . '/items/';
+                if (file_exists($metaFile)) {
+                    try {
+                        $project = StorageService::readJson($metaFile, true);
+                        if (is_dir($itemsDir)) {
+                            $itemFiles = glob($itemsDir . '*.json');
+                            foreach ($itemFiles as $file) {
+                                try {
+                                    $item = StorageService::readJson($file, true);
+                                    if ($item['type'] === 'reminder') {
+                                        $reminders[] = [
+                                            'project_id' => $project['id'],
+                                            'project_name' => $project['name'],
+                                            'project_color' => $project['color'],
+                                            'item' => $item
+                                        ];
+                                    } else if (!empty($item['fields']['bookmark']) && ($item['fields']['bookmark'] === true || $item['fields']['bookmark'] === 'true')) {
+                                        $bookmarks[] = [
+                                            'project_id' => $project['id'],
+                                            'project_name' => $project['name'],
+                                            'project_color' => $project['color'],
+                                            'item' => $item
+                                        ];
+                                    }
+                                } catch (\Exception $e) {}
+                            }
+                        }
+                    } catch (\Exception $e) {}
+                }
+            }
+        }
+        echo json_encode(['success' => true, 'reminders' => $reminders, 'bookmarks' => $bookmarks]);
         break;
 
     case 'get_project_data':
@@ -365,6 +411,10 @@ switch ($action) {
         if (isset($payload['theme'])) {
             $config['theme'] = $payload['theme'];
             $_SESSION['config']['theme'] = $config['theme'];
+        }
+        if (isset($payload['layout_mode'])) {
+            $config['layout_mode'] = $payload['layout_mode'];
+            $_SESSION['config']['layout_mode'] = $config['layout_mode'];
         }
         
         StorageService::writeJson($configFile, $config, false);

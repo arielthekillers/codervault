@@ -34,6 +34,13 @@ export class FormBuilder {
                 <div class="position-relative input-group">
                     <textarea data-field="${field.name}" class="form-control form-control-vault" rows="16" ${isReq} style="resize: vertical;">${val}</textarea>
                 </div>`;
+            } else if (field.type === 'checkbox') {
+                const isChecked = (val === true || val === 'true' || val === '1' || val === 'on') ? 'checked' : '';
+                html += `
+                <div class="form-check form-switch mt-2 mb-1">
+                    <input class="form-check-input shadow-none" type="checkbox" role="switch" data-field="${field.name}" id="check_${field.name}" ${isChecked} style="cursor: pointer;">
+                    <label class="form-check-label text-muted small ms-2" for="check_${field.name}" style="cursor: pointer;">${field.label}</label>
+                </div>`;
             } else {
                 const isPassword = field.type === 'password' || field.revealable;
                 const isFirefox = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('firefox');

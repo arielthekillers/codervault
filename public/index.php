@@ -28,11 +28,11 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link href="assets/css/theme.css" rel="stylesheet">
+    <link href="assets/css/theme.css?v=3" rel="stylesheet">
 </head>
 <body>
 
-    <!-- Target Mount for Core Application Controller Initialization State -->
+
     <div id="appShell">
         <div class="d-flex justify-content-center align-items-center vh-100 bg-app text-secondary">
             <div class="text-center">
@@ -42,11 +42,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- ========================================================== -->
-    <!-- MODAL ARCHITECTURES (REUSED INLINE VIA JS ENGINE)          -->
-    <!-- ========================================================== -->
 
-    <!-- 1. Global Command Palette Modal (Ctrl + K) -->
     <div class="modal fade" id="commandPaletteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content bg-card shadow-lg overflow-hidden" style="border: 1px solid var(--border-color);">
@@ -71,7 +67,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- 2. Type Selection Modal -->
+
     <div class="modal fade" id="itemTypeSelectionModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
@@ -86,7 +82,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- 3. Dynamic Generic Item Engine Modal (Create / Edit) -->
+
     <div class="modal fade" id="itemEngineModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
@@ -97,7 +93,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
                     </h5>
                     <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
-                <!-- Converted form to div to neuter browser autofill heuristics -->
+
                 <div id="itemEngineForm">
                     <div class="modal-body p-4">
                         <input type="hidden" id="itemFormId">
@@ -129,7 +125,6 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- 3. New Project Context Modal -->
     <div class="modal fade" id="projectModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
@@ -196,7 +191,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- 5. Settings Modal -->
+
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color); min-height: 500px;">
@@ -338,7 +333,7 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- 6. Import Share Modal -->
+
     <div class="modal fade" id="importShareModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
@@ -369,7 +364,66 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- Generic Confirmation Modal -->
+
+    <div class="modal fade" id="launcherHelpModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
+                <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold" style="color: var(--text-primary)"><i class="bi bi-magic me-2" style="color: var(--accent);"></i>Magic Launcher Guide</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-4">Gunakan pintasan berikut di dalam Magic Launcher (tekan <kbd>Shift+F</kbd> atau tombol <kbd>/</kbd>) untuk mempercepat alur kerja Anda.</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 rounded bg-dark-edge border-transparent h-100">
+                                <h6 class="fw-semibold mb-3" style="color: var(--accent);"><i class="bi bi-search me-2"></i>Pencarian & Filter</h6>
+                                <ul class="list-unstyled small text-muted mb-0">
+                                    <li class="mb-2"><kbd>kata_kunci</kbd> <span class="ms-1">Cari item berdasarkan nama atau nilai</span></li>
+                                    <li class="mb-2"><kbd>login: nama</kbd> <span class="ms-1">Filter pencarian hanya untuk Akun Login</span></li>
+                                    <li><kbd>note: nama</kbd> <span class="ms-1">Filter pencarian hanya untuk Catatan</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded bg-dark-edge border-transparent h-100">
+                                <h6 class="fw-semibold mb-3" style="color: var(--accent-success);"><i class="bi bi-plus-lg me-2"></i>Penambahan Cepat (Add)</h6>
+                                <ul class="list-unstyled small text-muted mb-0">
+                                    <li class="mb-2"><kbd>add</kbd> <span class="ms-1">Menampilkan opsi tambah semua tipe item</span></li>
+                                    <li class="mb-2"><kbd>add login</kbd> <span class="ms-1">Buat item Akun Login baru</span></li>
+                                    <li class="mb-2"><kbd>add reminder</kbd> <span class="ms-1">Buat Pengingat Penting baru</span></li>
+                                    <li class="mb-2"><kbd>add reference</kbd> <span class="ms-1">Simpan Tautan Referensi baru</span></li>
+                                    <li><kbd>add workspace</kbd> <span class="ms-1">Buat ruang kerja (workspace) baru</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 rounded bg-dark-edge border-transparent h-100">
+                                <h6 class="fw-semibold mb-3 text-warning"><i class="bi bi-terminal me-2"></i>Perintah Sistem</h6>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <ul class="list-unstyled small text-muted mb-0">
+                                            <li class="mb-2"><kbd>darkmode</kbd> / <kbd>lightmode</kbd> <span class="ms-1">Ganti Tema Sistem</span></li>
+                                            <li class="mb-2"><kbd>import</kbd> <span class="ms-1">Membuka form import data</span></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <ul class="list-unstyled small text-muted mb-0">
+                                            <li class="mb-2"><kbd>settings</kbd> <span class="ms-1">Membuka Pengaturan</span></li>
+                                            <li class="mb-2"><kbd>lock</kbd> / <kbd>logout</kbd> <span class="ms-1">Kunci / Keluar Aplikasi</span></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <div class="modal fade" id="genericConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content bg-card shadow-lg" style="border: 1px solid var(--border-color);">
@@ -390,14 +444,12 @@ if (!isset($_SESSION['config']['theme']) && file_exists($configFile)) {
         </div>
     </div>
 
-    <!-- ========================================================== -->
-    <!-- FRAMEWORK SCRIPT BOOTSTRAPPING ENGINE                      -->
-    <!-- ========================================================== -->
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script type="module" src="assets/js/app.js?v=22"></script>
+    <script type="module" src="assets/js/app.js?v=23"></script>
 
-    <!-- Global Interface Action Proxies for FormBuilder Inline Click Handlers -->
+
     <script>
         const VaultUI = {
             toggleReveal(btn) {
