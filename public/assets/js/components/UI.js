@@ -513,5 +513,9 @@ export class VaultUI {
         
         const bModal = bootstrap.Modal.getOrCreateInstance(modalEl);
         bModal.show();
+        
+        setTimeout(() => {
+            document.getElementById('projectFormName').focus();
+        }, 300);
     }
 }
