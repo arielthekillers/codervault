@@ -1384,7 +1384,75 @@ class ProjectVaultApp {
         SearchIndex.renderResults(container, this.searchMatches);
     }
 
+    async checkSystemUpdate() {
+        this.showToast('Memeriksa pembaruan...', 'info');
+        const res = await this.makeRequest('api.php?action=check_update');
+        if (res && res.success) {
+            if (res.update_available) {
+                // Tampilkan modal pembaruan
+                let modalEl = document.getElementById('updateSystemModal');
+                if (!modalEl) {
+                    const html = `
+                    <div class="modal fade" id="updateSystemModal" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-0 shadow-lg" style="background-color: var(--bg-card);">
+                                <div class="modal-header border-bottom border-secondary">
+                                    <h5 class="modal-title text-primary"><i class="bi bi-cloud-arrow-down me-2"></i>Pembaruan Tersedia</h5>
+                                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center py-4">
+                                    <div id="updateStatusText" class="mb-4" style="color: var(--text-primary);">
+                                        <p class="mb-1">${res.message}</p>
+                                        <small class="text-muted">Metode instalasi: ${res.is_git ? 'Git' : 'ZIP'}</small>
+                                    </div>
+                                    <button type="button" id="executeUpdateBtn" class="btn btn-primary px-4 py-2" onclick="VaultEngine.executeSystemUpdate('${res.latest_sha || ''}')">
+                                        <i class="bi bi-download me-2"></i>Download & Pasang Otomatis
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                    document.body.insertAdjacentHTML('beforeend', html);
+                    modalEl = document.getElementById('updateSystemModal');
+                } else {
+                    document.getElementById('updateStatusText').innerHTML = `
+                        <p class="mb-1">${res.message}</p>
+                        <small class="text-muted">Metode instalasi: ${res.is_git ? 'Git' : 'ZIP'}</small>
+                    `;
+                    document.getElementById('executeUpdateBtn').setAttribute('onclick', `VaultEngine.executeSystemUpdate('${res.latest_sha || ''}')`);
+                }
+                const bModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                bModal.show();
+            } else {
+                this.showToast(res.message, 'success');
+            }
+        }
+    }
 
+    async executeSystemUpdate(latestSha = '') {
+        const btn = document.getElementById('executeUpdateBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Memasang...';
+        }
+        const res = await this.makeRequest('api.php?action=do_update', {
+            method: 'POST',
+            body: { latest_sha: latestSha }
+        });
+        
+        if (res && res.success) {
+            this.showToast(res.message + ' Memuat ulang aplikasi...', 'success');
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1500);
+        } else {
+            this.showToast(res?.message || 'Gagal memperbarui aplikasi.', 'danger');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-download me-2"></i>Download & Pasang Otomatis';
+            }
+        }
+    }
 
     showToast(message, variant = "info") {
         let container = document.getElementById('vaultToastContainer');

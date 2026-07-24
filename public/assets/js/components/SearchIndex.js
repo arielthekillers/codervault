@@ -62,6 +62,18 @@ export class SearchIndex {
                 }
             },
             {
+                aliases: ['update', 'cek pembaruan', 'upgrade', 'system update'],
+                item: {
+                    type: 'SYSTEM',
+                    label: 'Periksa Pembaruan Sistem',
+                    desc: 'Cek versi terbaru dari GitHub',
+                    action: () => {
+                        bootstrap.Modal.getInstance(document.getElementById('commandPaletteModal'))?.hide();
+                        VaultEngine.checkSystemUpdate();
+                    }
+                }
+            },
+            {
                 aliases: ['import', 'impor'],
                 item: {
                     type: 'SYSTEM',

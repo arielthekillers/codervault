@@ -667,6 +667,139 @@ switch ($action) {
 
         echo json_encode(['success' => true, 'message' => 'Sistem berhasil di-restore!']);
         break;
+
+    case 'check_update':
+        $hasGit = is_dir(__DIR__ . '/../.git');
+        $repoUrl = 'arielthekillers/codervault';
+        $updateAvailable = false;
+        $message = '';
+        $latestSha = '';
+        
+        if ($hasGit) {
+            shell_exec('git fetch origin main 2>&1');
+            $behindRaw = shell_exec('git rev-list HEAD..origin/main --count 2>&1');
+            $behind = intval(trim($behindRaw));
+            if ($behind > 0) {
+                $updateAvailable = true;
+                $message = "Pembaruan tersedia! Anda tertinggal $behind commit dari versi terbaru.";
+            } else {
+                $message = 'App Anda up-to-date.';
+            }
+        } else {
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'header' => ['User-Agent: CoderVault-Updater']
+                ]
+            ]);
+            $latestCommitStr = @file_get_contents("https://api.github.com/repos/{$repoUrl}/commits/main", false, $context);
+            if ($latestCommitStr) {
+                $latestCommit = json_decode($latestCommitStr, true);
+                $latestSha = $latestCommit['sha'] ?? '';
+                
+                $versionFile = __DIR__ . '/../config/version.json';
+                $localSha = '';
+                if (file_exists($versionFile)) {
+                    $versionData = StorageService::readJson($versionFile, false);
+                    $localSha = $versionData['sha'] ?? '';
+                }
+                
+                if ($latestSha && $latestSha !== $localSha) {
+                    $updateAvailable = true;
+                    $message = "Pembaruan baru tersedia! (Metode ZIP)";
+                } else {
+                    $message = 'App Anda up-to-date.';
+                }
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Gagal mengecek pembaruan ke GitHub API.']);
+                exit;
+            }
+        }
+        
+        echo json_encode([
+            'success' => true, 
+            'update_available' => $updateAvailable, 
+            'message' => $message,
+            'is_git' => $hasGit,
+            'latest_sha' => $latestSha
+        ]);
+        break;
+
+    case 'do_update':
+        $hasGit = is_dir(__DIR__ . '/../.git');
+        $repoUrl = 'arielthekillers/codervault';
+        
+        if ($hasGit) {
+            shell_exec('git fetch origin main 2>&1');
+            shell_exec('git reset --hard origin/main 2>&1');
+            shell_exec('git pull origin main 2>&1');
+            echo json_encode(['success' => true, 'message' => 'Pembaruan berhasil diterapkan (Git).']);
+            break;
+        } else {
+            $latestSha = $payload['latest_sha'] ?? '';
+            $zipUrl = "https://github.com/{$repoUrl}/archive/refs/heads/main.zip";
+            
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'header' => ['User-Agent: CoderVault-Updater']
+                ]
+            ]);
+            
+            $zipContent = @file_get_contents($zipUrl, false, $context);
+            if (!$zipContent) {
+                echo json_encode(['success' => false, 'message' => 'Gagal mengunduh file ZIP dari GitHub.']);
+                exit;
+            }
+            
+            $tmpZip = tempnam(sys_get_temp_dir(), 'cv_update_');
+            file_put_contents($tmpZip, $zipContent);
+            
+            $zip = new ZipArchive();
+            if ($zip->open($tmpZip) === true) {
+                $rootDir = '';
+                for ($i = 0; $i < $zip->numFiles; $i++) {
+                    $stat = $zip->statIndex($i);
+                    if ($i === 0) {
+                        $rootDir = $stat['name'];
+                    }
+                    
+                    if ($stat['name'] === $rootDir) continue;
+                    
+                    $filename = substr($stat['name'], strlen($rootDir));
+                    
+                    // Safe boundaries
+                    if (strpos($filename, 'storage/') === 0 || $filename === 'config/config.json' || $filename === 'config/version.json') {
+                        continue;
+                    }
+                    
+                    if (substr($filename, -1) === '/') {
+                        if (!is_dir(__DIR__ . '/../' . $filename)) {
+                            mkdir(__DIR__ . '/../' . $filename, 0755, true);
+                        }
+                    } else {
+                        $dir = dirname(__DIR__ . '/../' . $filename);
+                        if (!is_dir($dir)) mkdir($dir, 0755, true);
+                        
+                        $content = $zip->getFromIndex($i);
+                        file_put_contents(__DIR__ . '/../' . $filename, $content);
+                    }
+                }
+                $zip->close();
+                unlink($tmpZip);
+                
+                if ($latestSha) {
+                    $versionFile = __DIR__ . '/../config/version.json';
+                    StorageService::writeJson($versionFile, ['sha' => $latestSha], false);
+                }
+                
+                echo json_encode(['success' => true, 'message' => 'Pembaruan berhasil diterapkan (ZIP).']);
+            } else {
+                unlink($tmpZip);
+                echo json_encode(['success' => false, 'message' => 'Gagal mengekstrak file ZIP.']);
+            }
+            break;
+        }
         http_response_code(444);
         echo json_encode(['success' => false, 'message' => 'Action unrecognized.']);
         break;
