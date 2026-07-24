@@ -536,17 +536,21 @@ class ProjectVaultApp {
                     if (codeEl) {
                         codeEl.innerText = `${code.slice(0,3)} ${code.slice(3)}`;
                     }
-                    if (progressEl) {
-                        progressEl.style.width = `${progressPercent}%`;
+                    
+                    const ringEl = container.querySelector('.totp-ring');
+                    if (ringEl) {
+                        const dashoffset = 62.8 - ((remaining / period) * 62.8);
+                        ringEl.style.strokeDashoffset = dashoffset;
+                        
                         if (remaining <= 5) {
-                            progressEl.classList.remove('bg-info', 'bg-warning');
-                            progressEl.classList.add('bg-danger');
+                            ringEl.classList.remove('text-info', 'text-warning');
+                            ringEl.classList.add('text-danger');
                         } else if (remaining <= 10) {
-                            progressEl.classList.remove('bg-info', 'bg-danger');
-                            progressEl.classList.add('bg-warning');
+                            ringEl.classList.remove('text-info', 'text-danger');
+                            ringEl.classList.add('text-warning');
                         } else {
-                            progressEl.classList.remove('bg-warning', 'bg-danger');
-                            progressEl.classList.add('bg-info');
+                            ringEl.classList.remove('text-warning', 'text-danger');
+                            ringEl.classList.add('text-info');
                         }
                     }
                 } catch(e) {

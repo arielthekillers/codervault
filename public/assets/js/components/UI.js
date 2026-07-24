@@ -302,9 +302,12 @@ export class VaultUI {
                                 let targetHtml = '<span class="text-muted small">-</span>';
                                 if (secretClean) {
                                     targetHtml = `<div class="d-flex align-items-center gap-2 totp-container" data-secret="${secretClean}" onclick="event.stopPropagation()">
-                                        <span class="fs-5 fw-bold text-primary font-monospace tracking-widest totp-code">------</span>
-                                        <div class="progress" style="width: 40px; height: 6px; background-color: var(--bg-dark-edge);" title="Waktu tersisa"><div class="progress-bar bg-info totp-progress" role="progressbar" style="width: 100%; transition: none;"></div></div>
-                                        <button class="btn btn-sm btn-link text-muted p-0 ms-2 hover-primary totp-copy" title="Copy" onclick="const code=this.parentElement.querySelector('.totp-code').innerText.replace(' ',''); navigator.clipboard.writeText(code); this.innerHTML='<i class=\\'bi bi-check-lg text-success\\'></i>'; setTimeout(() => this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>', 1500);"><i class="bi bi-clipboard"></i></button>
+                                        <span class="fs-5 fw-bold text-primary font-monospace tracking-widest totp-code" style="letter-spacing: 2px;">------</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" style="transform: rotate(-90deg);" class="ms-1" title="Waktu tersisa">
+                                            <circle cx="12" cy="12" r="10" stroke="var(--bg-dark-edge)" stroke-width="4" fill="none" />
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" class="totp-ring text-info" stroke-dasharray="62.8" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;" />
+                                        </svg>
+                                        <button class="btn btn-sm btn-link text-muted p-0 ms-1 hover-primary totp-copy" title="Copy" onclick="const code=this.parentElement.querySelector('.totp-code').innerText.replace(' ',''); navigator.clipboard.writeText(code); this.innerHTML='<i class=\\'bi bi-check-lg text-success\\'></i>'; setTimeout(() => this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>', 1500);"><i class="bi bi-clipboard"></i></button>
                                     </div>`;
                                 }
                                 colsHtml = `<td class="py-2" style="font-size: 0.85rem;">${targetHtml}</td>`;
