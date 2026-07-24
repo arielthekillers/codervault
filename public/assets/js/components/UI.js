@@ -297,6 +297,17 @@ export class VaultUI {
                                     }
                                 } catch(e) {}
                                 colsHtml = `<td class="py-2" style="font-size: 0.85rem;"><span class="text-secondary fw-medium"><i class="bi bi-calendar-event me-2"></i>${formattedDate}</span></td>`;
+                            } else if (item.type === 'totp') {
+                                const secretClean = item.fields.secret ? item.fields.secret.replace(/\\s+/g, '') : '';
+                                let targetHtml = '<span class="text-muted small">-</span>';
+                                if (secretClean) {
+                                    targetHtml = `<div class="d-flex align-items-center gap-2 totp-container" data-secret="${secretClean}" onclick="event.stopPropagation()">
+                                        <span class="fs-5 fw-bold text-primary font-monospace tracking-widest totp-code">------</span>
+                                        <div class="progress" style="width: 40px; height: 6px; background-color: var(--bg-dark-edge);" title="Waktu tersisa"><div class="progress-bar bg-info totp-progress" role="progressbar" style="width: 100%; transition: none;"></div></div>
+                                        <button class="btn btn-sm btn-link text-muted p-0 ms-2 hover-primary totp-copy" title="Copy" onclick="const code=this.parentElement.querySelector('.totp-code').innerText.replace(' ',''); navigator.clipboard.writeText(code); this.innerHTML='<i class=\\'bi bi-check-lg text-success\\'></i>'; setTimeout(() => this.innerHTML='<i class=\\'bi bi-clipboard\\'></i>', 1500);"><i class="bi bi-clipboard"></i></button>
+                                    </div>`;
+                                }
+                                colsHtml = `<td class="py-2" style="font-size: 0.85rem;">${targetHtml}</td>`;
                             } else {
                                 const keys = Object.keys(item.fields);
                                 let targetHtml = '<span class="text-muted small">-</span>';
@@ -335,6 +346,8 @@ export class VaultUI {
                             colsHeader = `<th class="border-bottom-0 py-2" style="color: var(--text-muted); font-weight: normal; font-size: 0.85rem;">Endpoint URL</th>`;
                         } else if (type === 'note') {
                             colsHeader = `<th class="border-bottom-0 py-2" style="color: var(--text-muted); font-weight: normal; font-size: 0.85rem;">Content</th>`;
+                        } else if (type === 'totp') {
+                            colsHeader = `<th class="border-bottom-0 py-2" style="color: var(--text-muted); font-weight: normal; font-size: 0.85rem;">Authenticator Code (30s)</th>`;
                         } else {
                             colsHeader = `<th class="border-bottom-0 py-2" style="color: var(--text-muted); font-weight: normal; font-size: 0.85rem;">Detail</th>`;
                         }
@@ -459,7 +472,15 @@ export class VaultUI {
         bModal.show();
         
         setTimeout(() => {
-            document.getElementById('itemFormTitle').focus();
+            const titleInput = document.getElementById('itemFormTitle');
+            if (itemType === 'totp') {
+                titleInput.readOnly = true;
+                const secretInput = document.querySelector('input[data-field="secret"]');
+                if (secretInput) secretInput.focus();
+            } else {
+                titleInput.readOnly = false;
+                titleInput.focus();
+            }
         }, 300);
     }
 

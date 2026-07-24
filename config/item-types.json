@@ -75,5 +75,13 @@
             { "name": "url", "label": "URL Tautan", "type": "url", "required": true },
             { "name": "bookmark", "label": "Tambahkan ke Bookmark Utama", "type": "checkbox", "required": false }
         ]
+    },
+    "totp": {
+        "label": "2FA Authenticator",
+        "icon": "bi-shield-lock",
+        "color": "#ec4899",
+        "fields": [
+            { "name": "secret", "label": "Secret Key (Base32) / PASTE QR CODE SCREENSHOT HERE", "type": "password", "required": true, "revealable": true }
+        ]
     }
 }

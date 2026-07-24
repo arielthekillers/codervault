@@ -101,6 +101,101 @@ class ProjectVaultApp {
             }
         });
 
+        // QR Code Paste Handler
+        document.body.addEventListener('paste', (e) => {
+            const itemTypeSelector = document.getElementById('itemTypeSelector');
+            if (itemTypeSelector && itemTypeSelector.value === 'totp') {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                let foundImage = false;
+                for (let index in items) {
+                    const item = items[index];
+                    if (item.kind === 'file' && item.type.startsWith('image/')) {
+                        foundImage = true;
+                        const blob = item.getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, img.width, img.height);
+                                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                if (window.jsQR) {
+                                    const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+                                        inversionAttempts: "dontInvert",
+                                    });
+                                    if (code && code.data) {
+                                        try {
+                                            const urlObj = new URL(code.data);
+                                            const secret = urlObj.searchParams.get('secret');
+                                            
+                                            if (secret) {
+                                                const secretInput = document.querySelector('input[data-field="secret"]');
+                                                if (secretInput) {
+                                                    secretInput.value = secret;
+                                                    
+                                                    // Extract Label/Issuer from the otpauth URL to auto-fill the title (hostname is usually 'totp', pathname is '/Label')
+                                                    let label = decodeURIComponent(urlObj.pathname.replace(new RegExp('^/+'), ''));
+                                                    const issuer = urlObj.searchParams.get('issuer');
+                                                    
+                                                    // Format label nicely (e.g. "GitHub: Arielthekillers" instead of "GitHub:Arielthekillers")
+                                                    if (label) {
+                                                        label = label.replace(':', ': ');
+                                                    } else if (issuer) {
+                                                        label = issuer;
+                                                    }
+                                                    
+                                                    let finalLabel = label || '2FA Account';
+                                                    const titleInput = document.getElementById('itemFormTitle');
+                                                    if (titleInput && (!titleInput.value || titleInput.value === '')) {
+                                                        titleInput.value = finalLabel;
+                                                    } else if (titleInput && titleInput.value) {
+                                                        finalLabel = titleInput.value;
+                                                    }
+
+                                                    let isOverwriting = false;
+                                                    // Auto-detect existing items to prevent duplicates
+                                                    if (this.state && this.state.items) {
+                                                        const existing = this.state.items.find(i => i.type === 'totp' && i.title === finalLabel);
+                                                        if (existing) {
+                                                            const idInput = document.getElementById('itemFormId');
+                                                            if (idInput) {
+                                                                idInput.value = existing.id;
+                                                                isOverwriting = true;
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (isOverwriting) {
+                                                        this.showToast(`Kode QR terbaca. Data 2FA "${finalLabel}" akan ditimpa!`, "info");
+                                                    } else {
+                                                        this.showToast("QR Code berhasil terbaca! Secret Key dan Label telah diisi otomatis.", "success");
+                                                    }
+                                                } else {
+                                                    this.showToast("Gagal menemukan kolom Secret Key pada form.", "warning");
+                                                }
+                                            } else {
+                                                this.showToast("QR Code terbaca, tetapi tidak memiliki parameter Secret Key TOTP.", "warning");
+                                            }
+                                        } catch(err) {
+                                            this.showToast("Bukan format QR Code 2FA (otpauth) yang valid.", "warning");
+                                        }
+                                    } else {
+                                        this.showToast("Tidak ada QR Code yang terdeteksi pada gambar tersebut.", "warning");
+                                    }
+                                }
+                            };
+                            img.src = event.target.result;
+                        };
+                        reader.readAsDataURL(blob);
+                        break;
+                    }
+                }
+            }
+        });
+
         // Dynamic Field Injections Event delegation hook
         document.body.addEventListener('change', (e) => {
             if (e.target && e.target.id === 'itemTypeSelector') {
@@ -408,6 +503,57 @@ class ProjectVaultApp {
         
         this.setupAutoSave();
         this.setupInactivityLock();
+        this.setupTOTPUpdater();
+    }
+
+    setupTOTPUpdater() {
+        setInterval(() => {
+            if (!this.isUnlocked || !window.OTPAuth) return;
+            const totpContainers = document.querySelectorAll('.totp-container');
+            if (totpContainers.length === 0) return;
+            
+            const epoch = Math.floor(Date.now() / 1000);
+            const period = 30;
+            const remaining = period - (epoch % period);
+            const progressPercent = (remaining / period) * 100;
+            
+            totpContainers.forEach(container => {
+                const secret = container.getAttribute('data-secret');
+                if (!secret) return;
+                
+                try {
+                    const totp = new window.OTPAuth.TOTP({
+                        algorithm: 'SHA1',
+                        digits: 6,
+                        period: 30,
+                        secret: window.OTPAuth.Secret.fromBase32(secret)
+                    });
+                    
+                    const code = totp.generate();
+                    const codeEl = container.querySelector('.totp-code');
+                    const progressEl = container.querySelector('.totp-progress');
+                    
+                    if (codeEl) {
+                        codeEl.innerText = `${code.slice(0,3)} ${code.slice(3)}`;
+                    }
+                    if (progressEl) {
+                        progressEl.style.width = `${progressPercent}%`;
+                        if (remaining <= 5) {
+                            progressEl.classList.remove('bg-info', 'bg-warning');
+                            progressEl.classList.add('bg-danger');
+                        } else if (remaining <= 10) {
+                            progressEl.classList.remove('bg-info', 'bg-danger');
+                            progressEl.classList.add('bg-warning');
+                        } else {
+                            progressEl.classList.remove('bg-warning', 'bg-danger');
+                            progressEl.classList.add('bg-info');
+                        }
+                    }
+                } catch(e) {
+                    // Ignore errors silently
+                }
+            });
+        }, 1000);
     }
 
     setupInactivityLock() {
@@ -759,7 +905,7 @@ class ProjectVaultApp {
     async loadWorkspace() {
         this.isUnlocked = true;
         // Hydrate Dynamic Configuration Type Schemas
-        this.state.itemTypes = await fetch('config/item-types.json').then(r => r.json());
+        this.state.itemTypes = await fetch('config/item-types.json?v=' + Date.now()).then(r => r.json());
 
         const res = await this.makeRequest('api.php?action=get_projects');
         const aggRes = await this.makeRequest('api.php?action=get_dashboard_aggregates');
