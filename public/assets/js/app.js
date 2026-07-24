@@ -103,31 +103,37 @@ class ProjectVaultApp {
 
         // QR Code Paste Handler
         document.body.addEventListener('paste', (e) => {
-            const itemTypeSelector = document.getElementById('itemTypeSelector');
-            if (itemTypeSelector && itemTypeSelector.value === 'totp') {
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                let foundImage = false;
-                for (let index in items) {
-                    const item = items[index];
-                    if (item.kind === 'file' && item.type.startsWith('image/')) {
-                        foundImage = true;
-                        const blob = item.getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0, img.width, img.height);
-                                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                                if (window.jsQR) {
-                                    const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
-                                        inversionAttempts: "dontInvert",
-                                    });
-                                    if (code && code.data) {
-                                        try {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            let foundImage = false;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    foundImage = true;
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, img.width, img.height);
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            if (window.jsQR) {
+                                const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+                                    inversionAttempts: "dontInvert",
+                                });
+                                if (code && code.data) {
+                                    try {
+                                        if (code.data.startsWith('otpauth-migration://offline')) {
+                                            bootstrap.Modal.getInstance(document.getElementById('itemEngineModal'))?.hide();
+                                            this.handleGoogleAuthMigration(code.data);
+                                            return;
+                                        }
+
+                                        const itemTypeSelector = document.getElementById('itemTypeSelector');
+                                        if (itemTypeSelector && itemTypeSelector.value === 'totp') {
                                             const urlObj = new URL(code.data);
                                             const secret = urlObj.searchParams.get('secret');
                                             
@@ -136,11 +142,9 @@ class ProjectVaultApp {
                                                 if (secretInput) {
                                                     secretInput.value = secret;
                                                     
-                                                    // Extract Label/Issuer from the otpauth URL to auto-fill the title (hostname is usually 'totp', pathname is '/Label')
                                                     let label = decodeURIComponent(urlObj.pathname.replace(new RegExp('^/+'), ''));
                                                     const issuer = urlObj.searchParams.get('issuer');
                                                     
-                                                    // Format label nicely (e.g. "GitHub: Arielthekillers" instead of "GitHub:Arielthekillers")
                                                     if (label) {
                                                         label = label.replace(':', ': ');
                                                     } else if (issuer) {
@@ -156,7 +160,6 @@ class ProjectVaultApp {
                                                     }
 
                                                     let isOverwriting = false;
-                                                    // Auto-detect existing items to prevent duplicates
                                                     if (this.state && this.state.items) {
                                                         const existing = this.state.items.find(i => i.type === 'totp' && i.title === finalLabel);
                                                         if (existing) {
@@ -179,9 +182,10 @@ class ProjectVaultApp {
                                             } else {
                                                 this.showToast("QR Code terbaca, tetapi tidak memiliki parameter Secret Key TOTP.", "warning");
                                             }
-                                        } catch(err) {
-                                            this.showToast("Bukan format QR Code 2FA (otpauth) yang valid.", "warning");
                                         }
+                                    } catch(err) {
+                                        this.showToast("Bukan format QR Code 2FA (otpauth) yang valid.", "warning");
+                                    }
                                     } else {
                                         this.showToast("Tidak ada QR Code yang terdeteksi pada gambar tersebut.", "warning");
                                     }
@@ -193,7 +197,6 @@ class ProjectVaultApp {
                         break;
                     }
                 }
-            }
         });
 
         // Dynamic Field Injections Event delegation hook
@@ -1382,6 +1385,115 @@ class ProjectVaultApp {
 
         this.searchMatches = SearchIndex.query(query, this.state);
         SearchIndex.renderResults(container, this.searchMatches);
+    }
+
+    handleGoogleAuthMigration(uri) {
+        try {
+            const url = new URL(uri);
+            const dataParam = url.searchParams.get('data');
+            if (!dataParam) throw new Error("Parameter data tidak ditemukan");
+            
+            // Base64 decode
+            const base64Str = dataParam.replace(/-/g, '+').replace(/_/g, '/');
+            const rawStr = atob(base64Str);
+            const buffer = new Uint8Array(rawStr.length);
+            for (let i = 0; i < rawStr.length; i++) buffer[i] = rawStr.charCodeAt(i);
+
+            const decodeVarint = (buf, offset) => {
+                let result = 0;
+                let shift = 0;
+                while (true) {
+                    if (offset >= buf.length) break;
+                    let b = buf[offset++];
+                    result |= (b & 0x7f) << shift;
+                    if (!(b & 0x80)) return { value: result, offset: offset };
+                    shift += 7;
+                }
+                return { value: result, offset: offset };
+            };
+
+            const encodeBase32 = (bytes) => {
+                const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+                let bits = 0, value = 0, output = "";
+                for (let i = 0; i < bytes.length; i++) {
+                    value = (value << 8) | bytes[i];
+                    bits += 8;
+                    while (bits >= 5) {
+                        output += alphabet[(value >>> (bits - 5)) & 31];
+                        bits -= 5;
+                    }
+                }
+                if (bits > 0) output += alphabet[(value << (5 - bits)) & 31];
+                return output;
+            };
+
+            const accounts = [];
+            let offset = 0;
+            
+            while (offset < buffer.length) {
+                const { value: tagAndType, offset: off1 } = decodeVarint(buffer, offset);
+                offset = off1;
+                const tag = tagAndType >> 3;
+                const type = tagAndType & 7;
+
+                if (tag === 1 && type === 2) {
+                    const { value: length, offset: off2 } = decodeVarint(buffer, offset);
+                    offset = off2;
+                    const end = offset + length;
+                    
+                    let secretBytes = [];
+                    let name = "", issuer = "";
+                    
+                    while (offset < end) {
+                        const { value: inTagType, offset: inOff1 } = decodeVarint(buffer, offset);
+                        offset = inOff1;
+                        const inTag = inTagType >> 3;
+                        const inType = inTagType & 7;
+                        
+                        if (inType === 2) {
+                            const { value: inLen, offset: inOff2 } = decodeVarint(buffer, offset);
+                            offset = inOff2;
+                            const slice = buffer.slice(offset, offset + inLen);
+                            
+                            if (inTag === 1) secretBytes = Array.from(slice);
+                            if (inTag === 2) name = new TextDecoder().decode(slice);
+                            if (inTag === 3) issuer = new TextDecoder().decode(slice);
+                            offset += inLen;
+                        } else if (inType === 0) {
+                            offset = decodeVarint(buffer, offset).offset;
+                        } else {
+                            break; // Failsafe
+                        }
+                    }
+                    
+                    if (secretBytes.length > 0) {
+                        let finalLabel = name;
+                        if (issuer && !name.includes(issuer)) finalLabel = `${issuer}: ${name}`;
+                        if (finalLabel.includes('Google:')) finalLabel = finalLabel.replace('Google:', 'Google: ');
+                        accounts.push({ label: finalLabel, secret: encodeBase32(secretBytes) });
+                    }
+                } else {
+                    if (type === 0) offset = decodeVarint(buffer, offset).offset;
+                    else if (type === 2) {
+                        const { value: len, offset: off2 } = decodeVarint(buffer, offset);
+                        offset = off2 + len;
+                    } else if (type === 1) offset += 8;
+                    else if (type === 5) offset += 4;
+                    else break; // Unknown wire type, exit to prevent infinite loop
+                }
+            }
+
+            if (accounts.length === 0) {
+                this.showToast("Tidak ada akun yang bisa diekstrak dari QR tersebut.", "warning");
+                return;
+            }
+
+            VaultUI.showGoogleAuthImportModal(this, accounts);
+
+        } catch (err) {
+            console.error(err);
+            this.showToast("Gagal membongkar QR Code Google Authenticator.", "danger");
+        }
     }
 
     async checkSystemUpdate() {

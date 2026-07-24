@@ -542,4 +542,150 @@ export class VaultUI {
             document.getElementById('projectFormName').focus();
         }, 300);
     }
+
+    static showGoogleAuthImportModal(appInstance, accounts) {
+        let modalEl = document.getElementById('googleAuthImportModal');
+        if (!modalEl) {
+            const html = `
+            <div class="modal fade" id="googleAuthImportModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                    <div class="modal-content border-0 shadow-lg" style="background-color: var(--bg-card);">
+                        <div class="modal-header border-bottom border-secondary">
+                            <h5 class="modal-title text-primary"><i class="bi bi-google me-2"></i>Google Auth Importer</h5>
+                            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body py-4">
+                            <div class="alert alert-info border-0 bg-info bg-opacity-10 text-info">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                Ditemukan <strong><span id="gauthCount"></span></strong> akun di dalam QR Code.
+                            </div>
+                            
+                            <div id="gauthWorkspaceSelectorContainer" class="mb-4 d-none">
+                                <label class="form-label text-muted small fw-bold">Pilih Workspace Tujuan</label>
+                                <select id="gauthWorkspaceSelect" class="form-select bg-dark text-light border-secondary">
+                                </select>
+                            </div>
+
+                            <label class="form-label text-muted small fw-bold mb-3">Pilih Akun yang Ingin Diimpor</label>
+                            <div id="gauthAccountList" class="list-group list-group-flush rounded border border-secondary border-opacity-50" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Items injected here -->
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top border-secondary">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="button" id="gauthImportBtn" class="btn btn-primary px-4">
+                                <i class="bi bi-cloud-download me-2"></i>Import Terpilih
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            modalEl = document.getElementById('googleAuthImportModal');
+        }
+
+        document.getElementById('gauthCount').innerText = accounts.length;
+        
+        const listContainer = document.getElementById('gauthAccountList');
+        listContainer.innerHTML = '';
+        
+        accounts.forEach((acc, idx) => {
+            listContainer.innerHTML += `
+                <label class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" style="background-color: transparent; border-color: var(--bs-secondary); cursor: pointer;">
+                    <input class="form-check-input flex-shrink-0 gauth-checkbox" type="checkbox" value="${idx}" checked style="font-size: 1.25em;">
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-light">${acc.label}</div>
+                        <div class="text-muted small font-monospace">${acc.secret.substring(0,6)}...</div>
+                    </div>
+                </label>
+            `;
+        });
+
+        // Handle workspace selection if no active workspace
+        const wsContainer = document.getElementById('gauthWorkspaceSelectorContainer');
+        const wsSelect = document.getElementById('gauthWorkspaceSelect');
+        let targetProjectId = appInstance.state.activeProject?.id;
+        
+        if (!targetProjectId) {
+            wsContainer.classList.remove('d-none');
+            wsSelect.innerHTML = appInstance.state.projects.map(p => 
+                `<option value="${p.id}">${p.name}</option>`
+            ).join('');
+        } else {
+            wsContainer.classList.add('d-none');
+        }
+
+        const importBtn = document.getElementById('gauthImportBtn');
+        importBtn.onclick = async () => {
+            if (!targetProjectId) {
+                targetProjectId = wsSelect.value;
+            }
+            if (!targetProjectId) {
+                appInstance.showToast('Harap pilih Workspace tujuan.', 'warning');
+                return;
+            }
+
+            const checkboxes = document.querySelectorAll('.gauth-checkbox:checked');
+            if (checkboxes.length === 0) {
+                appInstance.showToast('Tidak ada akun yang dipilih.', 'warning');
+                return;
+            }
+
+            importBtn.disabled = true;
+            importBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengimpor...';
+            
+            let targetItems = [];
+            if (targetProjectId === appInstance.state.activeProject?.id) {
+                targetItems = appInstance.state.items || [];
+            } else {
+                const pRes = await appInstance.makeRequest(`api.php?action=get_project_data&id=${targetProjectId}`);
+                if (pRes && pRes.success) targetItems = pRes.items || [];
+            }
+            
+            let successCount = 0;
+            for (let i = 0; i < checkboxes.length; i++) {
+                const idx = parseInt(checkboxes[i].value);
+                const acc = accounts[idx];
+                
+                const existing = targetItems.find(item => item.type === 'totp' && item.title === acc.label);
+                const itemId = existing ? existing.id : ('item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5));
+                
+                const payload = {
+                    id: itemId,
+                    type: 'totp',
+                    title: acc.label,
+                    description: 'Diimpor dari Google Authenticator',
+                    color: '#4285F4',
+                    icon: 'bi-google',
+                    fields: {
+                        secret: acc.secret
+                    }
+                };
+
+                const res = await appInstance.makeRequest('api.php?action=save_item', {
+                    method: 'POST',
+                    body: { project_id: targetProjectId, item: payload }
+                });
+                
+                if (res && res.success) {
+                    successCount++;
+                }
+            }
+            
+            importBtn.disabled = false;
+            importBtn.innerHTML = '<i class="bi bi-cloud-download me-2"></i>Import Terpilih';
+            bootstrap.Modal.getInstance(modalEl).hide();
+            
+            appInstance.showToast(`${successCount} akun berhasil diimpor! Memuat ulang...`, 'success');
+            
+            // Reload active project if it's the target
+            if (appInstance.state.activeProject?.id === targetProjectId) {
+                appInstance.fetchProjects();
+                await appInstance.switchProject(targetProjectId);
+            }
+        };
+
+        const bModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        bModal.show();
+    }
 }
